@@ -1,12 +1,12 @@
-# MASTER_GENERATOR_PART_02.md
+# MASTER_GENERATOR_PART_03.md
 
 # ============================================
 
 # VR EDUCATION HAJI & UMRAH
 
-# MASTER GENERATOR PART 02
+# MASTER GENERATOR PART 03
 
-# Scene 04 - Scene 06
+# Scene 07 - Scene 11
 
 # Version 1.0
 
@@ -274,110 +274,157 @@ Checklist implementasi lengkap.
 
 # ============================================
 
-# SCENE 04
+# SCENE 07
 
 # ============================================
 
 Nama File:
 
-05_Scene_04_Masuk_Masjidil_Haram.md
+08_Scene_07_Muzdalifah.md
 
 Generator WAJIB membuat:
 
-* Gambaran Masjidil Haram
-* Pintu Masuk Masjidil Haram
-* Adab Memasuki Masjid
-* Doa Masuk Masjid
-* Area Pelataran
-* Posisi Ka'bah Pertama Kali Terlihat
-* Edukasi Tentang Masjidil Haram
-* Penjelasan Keutamaan Masjidil Haram
+* Area Muzdalifah malam hari
+* Suasana Mabit (Bermalam)
+* Aktivitas mengumpulkan batu kerikil
+* NPC Jamaah sedang beristirahat dan mencari batu
 * NPC Pembimbing
-* NPC Jamaah
+* Edukasi Mabit di Muzdalifah
+* Hukum Mabit di Muzdalifah (Wajib Haji)
+* Jumlah batu yang dikumpulkan (7 atau 70 batu)
 * Audio Narasi
-* Audio Ambient
+* Audio Ambient (Malam hari, doa, dzikir)
 * Subtitle
 * UI Tutorial
-* Objective
+* Objective (Kumpulkan batu)
 * Checkpoint
 * Validation
-* Persiapan Menuju Tawaf
+* Persiapan Menuju Mina
 
 ---
 
 # ============================================
 
-# SCENE 05
+# SCENE 08
 
 # ============================================
 
 Nama File:
 
-06_Scene_05_Tawaf_Umrah.md
+09_Scene_08_Mina_Jumrah_Aqabah.md
 
 Generator WAJIB membuat:
 
-* Area Mataf
-* Ka'bah
-* Hajar Aswad
-* Maqam Ibrahim
-* Lampu Hijau
-* Jalur Tawaf
+* Area Jamarat (Jumrah Aqabah)
+* Suasana Mina
+* Aktivitas Melontar 7 batu kerikil ke Jumrah Aqabah
+* Aktivitas Menyembelih Hadyu (Dam)
+* Aktivitas Tahallul Awal (Mencukur rambut)
 * NPC Jamaah
 * NPC Pembimbing
-* Edukasi Tawaf
-* Pengertian Tawaf
-* Syarat Tawaf
-* Rukun Tawaf
-* Cara Memulai Tawaf
-* Arah Putaran
-* Perhitungan 7 Putaran
-* Counter Putaran
-* Highlight Jalur
-* Audio Talbiyah
+* Edukasi Melontar Jumrah (Makna simbolis)
+* Doa saat melontar
+* Larangan Ihram yang gugur setelah Tahallul Awal
 * Audio Narasi
+* Audio Suasana Jamarat
 * Subtitle
-* Progress Tawaf
 * UI Tutorial
+* Objective (Melontar 7x, Tahallul)
 * Checkpoint
 * Validation
-* Persiapan Menuju Sa'i
+* Persiapan Menuju Makkah (Tawaf Ifadah)
 
 ---
 
 # ============================================
 
-# SCENE 06
+# SCENE 09
 
 # ============================================
 
 Nama File:
 
-07_Scene_06_Sai_Umrah.md
+10_Scene_09_Tawaf_Ifadah_Sai_Haji.md
 
 Generator WAJIB membuat:
 
-* Bukit Shafa
-* Bukit Marwah
-* Jalur Sa'i
-* Lampu Hijau
-* NPC Jamaah
+* Area Masjidil Haram (Ka'bah dan Masa'a)
+* Aktivitas Tawaf Ifadah (Rukun Haji)
+* Aktivitas Sa'i Haji (Rukun Haji)
+* Status Tahallul Tsani (Seluruh larangan ihram gugur)
+* NPC Jamaah dengan pakaian biasa/bebas (karena sudah Tahallul Awal)
 * NPC Pembimbing
-* Edukasi Sa'i
-* Kisah Siti Hajar
-* Hikmah Sa'i
-* Tata Cara Sa'i
-* Arah Perjalanan
-* Counter 7 Perjalanan
-* Progress Sa'i
+* Edukasi perbedaan Tawaf Umrah dan Tawaf Ifadah
 * Audio Narasi
-* Audio Ambient
+* Audio Talbiyah / Dzikir
 * Subtitle
 * UI Tutorial
-* Objective
+* Objective (Selesaikan Tawaf 7 putaran dan Sa'i 7 kali)
 * Checkpoint
 * Validation
-* Persiapan Tahallul
+* Persiapan Kembali ke Mina
+
+---
+
+# ============================================
+
+# SCENE 10
+
+# ============================================
+
+Nama File:
+
+11_Scene_10_Mabit_Mina_Tiga_Jumrah.md
+
+Generator WAJIB membuat:
+
+* Area Perkemahan Mina
+* Area Jamarat Lengkap (Ula, Wustha, Aqabah)
+* Hari Tasyrik (11, 12, 13 Dzulhijjah)
+* Aktivitas Mabit di Mina
+* Aktivitas Melontar 3 Jumrah secara berurutan
+* NPC Jamaah
+* NPC Pembimbing
+* Edukasi tentang Nafar Awal dan Nafar Tsani
+* Urutan melontar (Ula -> Wustha -> Aqabah)
+* Doa di antara lontaran Jumrah Ula dan Wustha
+* Audio Narasi
+* Audio Ambient Mina
+* Subtitle
+* UI Tutorial
+* Objective (Melontar total 21 batu per hari)
+* Checkpoint
+* Validation
+* Persiapan Menuju Makkah
+
+---
+
+# ============================================
+
+# SCENE 11
+
+# ============================================
+
+Nama File:
+
+12_Scene_11_Tawaf_Wada.md
+
+Generator WAJIB membuat:
+
+* Area Mataf Masjidil Haram
+* Aktivitas Tawaf Wada' (Tawaf Perpisahan)
+* NPC Jamaah
+* NPC Pembimbing
+* Edukasi Hukum Tawaf Wada' (Wajib Haji)
+* Larangan menetap di Makkah setelah Tawaf Wada'
+* Doa perpisahan dan harapan mabrur
+* Halaman Penutup: "Selamat, Anda telah menyelesaikan simulasi ibadah haji."
+* Audio Narasi yang menyentuh/emosional
+* Subtitle
+* UI Tutorial
+* Objective (Selesaikan 7 Putaran Tawaf Wada')
+* Checkpoint Terakhir
+* Validation
 
 ---
 
@@ -385,31 +432,51 @@ Generator WAJIB membuat:
 
 Ketika user meminta:
 
-Generate Scene 04
+Generate Scene 07
 
 Buat file:
 
-05_Scene_04_Masuk_Masjidil_Haram.md
+08_Scene_07_Muzdalifah.md
 
 ---
 
 Ketika user meminta:
 
-Generate Scene 05
+Generate Scene 08
 
 Buat file:
 
-06_Scene_05_Tawaf_Umrah.md
+09_Scene_08_Mina_Jumrah_Aqabah.md
 
 ---
 
 Ketika user meminta:
 
-Generate Scene 06
+Generate Scene 09
 
 Buat file:
 
-07_Scene_06_Sai_Umrah.md
+10_Scene_09_Tawaf_Ifadah_Sai_Haji.md
+
+---
+
+Ketika user meminta:
+
+Generate Scene 10
+
+Buat file:
+
+11_Scene_10_Mabit_Mina_Tiga_Jumrah.md
+
+---
+
+Ketika user meminta:
+
+Generate Scene 11
+
+Buat file:
+
+12_Scene_11_Tawaf_Wada.md
 
 ---
 
@@ -423,8 +490,8 @@ Fokus pada dokumentasi implementasi.
 
 Gunakan teknologi yang telah ditentukan.
 
-Pastikan seluruh scene saling terhubung secara kronologis sesuai urutan ibadah Umrah.
+Pastikan seluruh scene saling terhubung secara kronologis sesuai urutan ibadah Haji.
 
 Setiap dokumen harus siap digunakan oleh tim developer, UI/UX, 3D Artist, dan QA tanpa perlu interpretasi ulang.
 
-# END OF MASTER_GENERATOR_PART_02.md
+# END OF MASTER_GENERATOR_PART_03.md
