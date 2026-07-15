@@ -77,28 +77,33 @@ export function arcade(mats, { count, spacing = 6, height = 9, depth = 2.5 }) {
 /* ============ KA'BAH & MASJIDIL HARAM ============ */
 
 export function kaaba(mats) {
+    // Skala nyata (§6): tinggi 13.1 m; sisi 12.86 m (sumbu X, sisi Hajar Aswad & pintu)
+    // dan 11.03 m (sumbu Z). Sumber: Wikipedia "Kaaba" & data resmi Masjidil Haram.
+    const W = 12.86, D = 11.03, H = 13.1;
+    const hw = W / 2, hd = D / 2;
     const g = new THREE.Group();
-    const body = mesh(new THREE.BoxGeometry(12, 14, 10.5), mats.kiswah, 0, 7, 0);
+    const body = mesh(new THREE.BoxGeometry(W, H, D), mats.kiswah, 0, H / 2, 0);
     g.add(body);
-    // Pintu emas
-    const door = mesh(new THREE.BoxGeometry(2.6, 4, 0.15), mats.gold, 2.5, 4.2, 5.32, { cast: false });
+    // Pintu emas (Bab) — tinggi ± 3.3 m, terangkat ± 2.2 m dari lantai, dekat sudut timur
+    const door = mesh(new THREE.BoxGeometry(1.9, 3.3, 0.15), mats.gold, 2.2, 2.2 + 1.65, hd + 0.08, { cast: false });
     g.add(door);
-    // Hajar Aswad — sudut timur (frame perak)
+    // Hajar Aswad — sudut timur (frame perak), ± 1.5 m di atas lantai
     const hajar = new THREE.Group();
     hajar.add(mesh(new THREE.TorusGeometry(0.45, 0.14, 10, 20), mats.steel, 0, 0, 0, { cast: false }));
     hajar.add(mesh(new THREE.SphereGeometry(0.26, 12, 10),
         new THREE.MeshStandardMaterial({ color: 0x0c0c10, roughness: 0.3 }), 0, 0, 0, { cast: false }));
-    hajar.position.set(6.05, 1.6, 5.3);
+    hajar.position.set(hw - 0.1, 1.5, hd - 0.1);
     g.add(hajar);
     g.userData.hajarAswad = hajar;
-    // Talang emas (mizab)
-    g.add(mesh(new THREE.BoxGeometry(0.6, 0.3, 2.4), mats.gold, 0, 14.2, -6.2, { cast: false }));
-    // Hijr Ismail — dinding setengah lingkaran
-    const hijr = mesh(new THREE.CylinderGeometry(4.6, 4.6, 1.32, 32, 1, true, 0, Math.PI), mats.marble, 0, 0.66, -9.5);
+    // Talang emas (mizab) di puncak dinding barat laut
+    g.add(mesh(new THREE.BoxGeometry(0.6, 0.3, 2.4), mats.gold, 0, H + 0.2, -hd - 0.6, { cast: false }));
+    // Hijr Ismail — dinding setengah lingkaran (Hatim) di sisi barat laut
+    const hijr = mesh(new THREE.CylinderGeometry(4.6, 4.6, 1.32, 32, 1, true, 0, Math.PI), mats.marble, 0, 0.66, -hd - 4, { cast: false });
     hijr.rotation.y = Math.PI;
     g.add(hijr);
-    // Shadharwan (alas miring)
-    g.add(mesh(new THREE.BoxGeometry(12.8, 0.5, 11.3), mats.grey, 0, 0.25, 0));
+    // Shadharwan (alas miring) sedikit lebih lebar dari denah Ka'bah
+    g.add(mesh(new THREE.BoxGeometry(W + 0.9, 0.5, D + 0.9), mats.grey, 0, 0.25, 0));
+    g.userData.footprint = { hw, hd };
     return g;
 }
 
@@ -182,7 +187,8 @@ export function masjidilHaram(engine, { crowdInMataf = false } = {}) {
 
     // Area jalan: mataf berbentuk cincin di sekitar Ka'bah + pelataran
     engine.addWalkCircle(0, 0, 70, 0);
-    engine.addBlocker(-7.4, -6.3, 7.4, 6.3);      // badan Ka'bah
+    // badan Ka'bah (skala nyata 12.86 × 11.03 m) + sedikit margin shadharwan
+    engine.addBlocker(-7.0, -6.1, 7.0, 6.1);
     engine.addBlocker(9.6, 7.2, 12.4, 9.9);       // maqam ibrahim
 
     engine.configureMinimap({
@@ -842,6 +848,110 @@ export function miqat(engine) {
         ]
     });
     return { bilik, rak, sajadah, bus };
+}
+
+/* ============ ARAFAH (WUKUF) ============ */
+
+/**
+ * Padang Arafah: dataran luas, Jabal Rahmah dengan tugu putih, Masjid Namirah,
+ * tenda-tenda putih, dan pepohonan. Puncak ibadah haji (9 Dzulhijjah).
+ */
+export function arafah(engine) {
+    const { scene, mats } = engine;
+    engine.ground(800, mats.sand);
+
+    // Bukit-bukit kecoklatan di cakrawala
+    for (let i = 0; i < 9; i++) {
+        const ang = (i / 9) * Math.PI * 2;
+        const hill = mesh(new THREE.ConeGeometry(34 + Math.random() * 40, 20 + Math.random() * 22, 7), mats.rock,
+            Math.cos(ang) * (200 + Math.random() * 70), 8, Math.sin(ang) * (200 + Math.random() * 70), { cast: false });
+        scene.add(hill);
+    }
+
+    // Jabal Rahmah — bukit batu granit dengan tugu putih di puncak
+    const jabalPos = { x: -58, z: -66 };
+    const jabalGeo = new THREE.IcosahedronGeometry(20, 1);
+    const jp = jabalGeo.attributes.position;
+    for (let i = 0; i < jp.count; i++) {
+        jp.setXYZ(i, jp.getX(i) * (0.9 + Math.random() * 0.3),
+            Math.max(0, jp.getY(i)) * 0.85, jp.getZ(i) * (0.9 + Math.random() * 0.3));
+    }
+    jabalGeo.computeVertexNormals();
+    const jabal = mesh(jabalGeo, mats.rock, jabalPos.x, 0.5, jabalPos.z);
+    scene.add(jabal);
+    // Tugu putih (monumen Jabal Rahmah) di puncak
+    const pillar = mesh(new THREE.BoxGeometry(2.4, 8, 2.4), mats.white, jabalPos.x, 17.5, jabalPos.z);
+    scene.add(pillar);
+    scene.add(mesh(new THREE.BoxGeometry(3.2, 0.6, 3.2), mats.cream, jabalPos.x, 13.5, jabalPos.z, { cast: false }));
+
+    // Masjid Namirah — fasad putih panjang + dua minaret (siluet)
+    const wall = mesh(new THREE.BoxGeometry(120, 14, 2), mats.cream, 40, 7, -96);
+    scene.add(wall);
+    const arc = arcade(mats, { count: 16, spacing: 6.5, height: 11 });
+    arc.position.set(40, 0, -94);
+    scene.add(arc);
+    const dome = mesh(new THREE.SphereGeometry(9, 22, 16, 0, Math.PI * 2, 0, Math.PI / 2), mats.white, 40, 14, -98, { cast: false });
+    scene.add(dome);
+    for (const mx of [-14, 94]) {
+        const mn = minaret(mats, 44, 1.8);
+        mn.position.set(mx, 0, -98);
+        scene.add(mn);
+    }
+    const nt = Tex.sign('مسجد نمرة — MASJID NAMIRAH', { bg: '#0e3b26', fg: '#ffe9a8', w: 1024, h: 110 });
+    scene.add(mesh(new THREE.BoxGeometry(18, 2, 0.4),
+        new THREE.MeshStandardMaterial({ map: nt, emissive: 0xffffff, emissiveMap: nt, emissiveIntensity: 0.85 }),
+        40, 12, -95, { cast: false }));
+
+    // Kota tenda putih Arafah (instanced)
+    const tentBody = new THREE.BoxGeometry(4.2, 2.3, 4.2);
+    const tentRoof = new THREE.ConeGeometry(3.3, 1.7, 4);
+    const tentMat = new THREE.MeshStandardMaterial({ color: 0xf3f1ea, roughness: 0.85 });
+    const count = 140;
+    const bodies = new THREE.InstancedMesh(tentBody, tentMat, count);
+    const roofs = new THREE.InstancedMesh(tentRoof, tentMat, count);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
+    const s1 = new THREE.Vector3(1, 1, 1);
+    let idx = 0;
+    for (let row = 0; row < 10 && idx < count; row++) {
+        for (let col = 0; col < 14 && idx < count; col++) {
+            const x = 30 + col * 10 + (row % 2) * 3;
+            const z = 30 + row * 9;
+            m4.makeTranslation(x, 1.15, z);
+            bodies.setMatrixAt(idx, m4);
+            m4.compose(new THREE.Vector3(x, 3.15, z), q, s1);
+            roofs.setMatrixAt(idx, m4);
+            idx++;
+        }
+    }
+    bodies.castShadow = roofs.castShadow = true;
+    bodies.receiveShadow = true;
+    scene.add(bodies, roofs);
+
+    // Pepohonan Arafah (neem) yang teduh + lampu
+    for (const [tx, tz] of [[-30, 6], [-14, -14], [10, 10], [-40, -30], [24, -8], [-6, 20], [16, 26]]) {
+        const t = palmTree(mats, 1.2);
+        t.position.set(tx, 0, tz);
+        scene.add(t);
+    }
+    for (let i = 0; i < 4; i++) {
+        const lp = lampPost(mats, 7);
+        lp.position.set(-40 + i * 26, 0, -6);
+        scene.add(lp);
+    }
+
+    // Jabal Rahmah menghalangi jalan (collision solid)
+    engine.addBlocker(jabalPos.x - 16, jabalPos.z - 16, jabalPos.x + 16, jabalPos.z + 16);
+    engine.addWalkRect(-70, -60, 90, 80);
+    engine.configureMinimap({
+        scale: 0.7, center: { x: 0, z: 0 },
+        features: [
+            { type: 'point', x: jabalPos.x, z: jabalPos.z, color: '#e8e2d2' },
+            { type: 'square', x: 40, z: -96, color: '#57d987' },
+            { type: 'square', x: 70, z: 55, color: '#f3f1ea' }
+        ]
+    });
+    return { jabal, pillar, jabalPos };
 }
 
 /* ============ MUZDALIFAH (MALAM) ============ */

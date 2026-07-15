@@ -60,10 +60,6 @@ C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\scopedcss\projectbundle\VRHaji.W
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\evqu1sx6ta-4kywy7iv6g.gz
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\33r7fazv25-zt21ndt1n1.gz
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\k1yttzvsla-5lcw1digk5.gz
-C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\gboziqcv9u-g405ij9dxt.gz
-C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\5u0u0ukz6m-s61bx1tjtf.gz
-C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\zn4sn1n0fv-cy68irmsjd.gz
-C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\v88kte7pi3-h6kllo0v84.gz
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\p78rixwphm-0stcpofgry.gz
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\svqrm8nr7x-9z64owyxmf.gz
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\lg6h1rcdp4-y8o6bkjk2z.gz
@@ -177,3 +173,8 @@ C:\VRProjectNew\src\VRHaji.Web\bin\Debug\net9.0\VRHaji.Web.runtimeconfig.json
 C:\VRProjectNew\src\VRHaji.Web\bin\Debug\net9.0\VRHaji.Web.pdb
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\VRHaji.Web.genruntimeconfig.cache
 C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\ref\VRHaji.Web.dll
+C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\VRHaji.Web.sourcelink.json
+C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\zn4sn1n0fv-323fw2pv5l.gz
+C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\gboziqcv9u-0g0uz66ne3.gz
+C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\5u0u0ukz6m-dqes6jzsuq.gz
+C:\VRProjectNew\src\VRHaji.Web\obj\Debug\net9.0\compressed\v88kte7pi3-4okhv4crc4.gz

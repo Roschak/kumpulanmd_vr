@@ -16,8 +16,8 @@
         @if (_totalDone > 0)
         {
             <div class="menu-hero__progress">
-                <div class="menu-hero__progress-bar"><span style="width:@(_totalDone * 100 / 11)%"></span></div>
-                <span class="menu-hero__progress-text">@_totalDone / 11 scene selesai</span>
+                <div class="menu-hero__progress-bar"><span style="width:@(_scenes.Count == 0 ? 0 : _totalDone * 100 / _scenes.Count)%"></span></div>
+                <span class="menu-hero__progress-text">@_totalDone / @_scenes.Count scene selesai</span>
                 <button class="btn btn--ghost btn--small" @onclick="ResetProgress">Ulangi dari awal</button>
             </div>
         }

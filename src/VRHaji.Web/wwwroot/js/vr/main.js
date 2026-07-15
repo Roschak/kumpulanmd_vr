@@ -7,7 +7,6 @@ import { SCENES } from './scenes.js';
 
 let engine = null;
 let sceneDef = null;
-let cpResolve = null;
 let started = false;
 
 /** Muat scene (tanpa memulai alur) agar 3D siap saat intro tampil. */
@@ -35,14 +34,10 @@ export async function start() {
     engine.setHint('Tahan klik + geser untuk melihat sekeliling · WASD berjalan · klik objek untuk interaksi');
 
     const ctx = {
-        checkpoint(n) {
-            engine.narrator.stop();
-            engine.setObjective('');
-            engine.setHint('');
-            return new Promise(resolve => {
-                cpResolve = resolve;
-                engine.dotnet.invokeMethodAsync('OnCheckpointReached', n);
-            });
+        // Sistem kuis pilihan ganda (ABCD) dihapus — checkpoint kini lanjut
+        // otomatis tanpa interupsi (alur netral). Lihat protokol §4.
+        checkpoint(_n) {
+            return Promise.resolve();
         },
         async complete() {
             engine.narrator.stop();
@@ -59,15 +54,6 @@ export async function start() {
     }
 }
 
-/** Dipanggil Blazor setelah checkpoint lulus. */
-export function resumeAfterCheckpoint(passed) {
-    if (cpResolve && passed) {
-        const r = cpResolve;
-        cpResolve = null;
-        r();
-    }
-}
-
 /** Buka/tutup UI Blazor — pause input & pointer lock. */
 export function setUiOpen(open) {
     engine?.setUiOpen(open);
@@ -79,6 +65,5 @@ export function dispose() {
         engine = null;
     }
     sceneDef = null;
-    cpResolve = null;
     started = false;
 }

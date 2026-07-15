@@ -4,7 +4,7 @@ using VRHaji.Web.Models;
 
 namespace VRHaji.Web.Data;
 
-/// <summary>Seeder database: 11 scene, checkpoint, dan konten edukasi sesuai dokumen proyek.</summary>
+/// <summary>Seeder database: 12 scene (termasuk Wukuf Arafah), checkpoint, dan konten edukasi sesuai dokumen proyek.</summary>
 public static class DbSeeder
 {
     private static string J(object o) => JsonSerializer.Serialize(o);
@@ -147,7 +147,31 @@ public static class DbSeeder
             },
             new()
             {
-                Urutan = 7, Nama = "Mabit di Muzdalifah",
+                Urutan = 7, Nama = "Wukuf di Arafah",
+                Lokasi = "Padang Arafah, Jabal Rahmah", Waktu = "Siang–senja (9 Dzulhijjah)",
+                Deskripsi = "Puncak dan rukun terbesar haji: wukuf di Padang Arafah pada 9 Dzulhijjah — memperbanyak doa, dzikir, dan istighfar hingga terbenam matahari.",
+                ConfigJson = J(new { durasi = "15-20 menit", objective = "Laksanakan wukuf: perbanyak doa hingga matahari terbenam" }),
+                EdukasiJson = J(new EdukasiContent(
+                    "Wukuf di Arafah — Rukun Terbesar Haji",
+                    ["Wukuf di Arafah adalah rukun haji yang paling utama — tanpanya haji tidak sah.",
+                     "Rasulullah SAW bersabda: \"Al-hajju Arafah\" — haji itu (wukufnya di) Arafah (HR Tirmidzi, Abu Dawud, dll).",
+                     "Waktu wukuf: sejak tergelincir matahari (zawal) 9 Dzulhijjah hingga terbit fajar 10 Dzulhijjah.",
+                     "Di Masjid Namirah dilaksanakan khutbah Arafah dan sholat Dzuhur–Ashar dijama' taqdim serta diqashar.",
+                     "Jabal Rahmah adalah bukit tempat pertemuan Nabi Adam dan Hawa; jamaah memperbanyak doa di sekitarnya.",
+                     "Hari Arafah adalah waktu doa paling mustajab; disunnahkan memperbanyak istighfar dan tahlil menghadap kiblat."],
+                    ["HR Tirmidzi — \"Al-hajju Arafah, barangsiapa mendapati (wukuf) malam Arafah sebelum terbit fajar maka ia telah mendapati haji.\"",
+                     "HR Muslim — \"Tidak ada hari yang lebih banyak Allah membebaskan hamba dari neraka selain hari Arafah.\"",
+                     "QS Al-Baqarah: 198 — \"Maka apabila kamu bertolak dari Arafah, berdzikirlah kepada Allah di Masy'aril Haram.\""],
+                    ["Merasakan puncak kepasrahan total kepada Allah.", "Kebersamaan jutaan jamaah dalam satu padang, satu doa.",
+                     "Mengenang padang Mahsyar di hari kiamat.", "Ampunan dan pembebasan dari api neraka."],
+                    ["Meninggalkan Arafah sebelum matahari terbenam (bagi yang wukuf siang) tanpa udzur.",
+                     "Menyia-nyiakan waktu wukuf dengan hal sia-sia, bukan doa dan dzikir."],
+                    ["Perbanyak doa untuk diri, keluarga, dan seluruh umat.", "Jaga kondisi fisik: cukup minum, hindari terik langsung.",
+                     "Hadirkan kekhusyukan — inilah inti perjalanan haji.", "Menghadap kiblat saat berdoa, bukan menghadap Jabal Rahmah."]))
+            },
+            new()
+            {
+                Urutan = 8, Nama = "Mabit di Muzdalifah",
                 Lokasi = "Muzdalifah", Waktu = "Malam hari (9 Dzulhijjah malam)",
                 Deskripsi = "Bermalam (mabit) di Muzdalifah setelah wukuf, mengumpulkan batu kerikil untuk melontar jumrah di Mina.",
                 ConfigJson = J(new { durasi = "15 menit", objective = "Kumpulkan 7 batu kerikil (dianjurkan 70)" }),
@@ -167,7 +191,7 @@ public static class DbSeeder
             },
             new()
             {
-                Urutan = 8, Nama = "Mina — Jumrah Aqabah",
+                Urutan = 9, Nama = "Mina — Jumrah Aqabah",
                 Lokasi = "Jamarat, Mina", Waktu = "Pagi 10 Dzulhijjah",
                 Deskripsi = "Melontar 7 batu ke Jumrah Aqabah, menyembelih hadyu (dam), dan Tahallul Awal.",
                 ConfigJson = J(new { durasi = "20 menit", objective = "Lontar 7 batu, lalu Tahallul Awal" }),
@@ -186,7 +210,7 @@ public static class DbSeeder
             },
             new()
             {
-                Urutan = 9, Nama = "Tawaf Ifadah dan Sa'i Haji",
+                Urutan = 10, Nama = "Tawaf Ifadah dan Sa'i Haji",
                 Lokasi = "Masjidil Haram, Makkah", Waktu = "Siang hari",
                 Deskripsi = "Rukun Haji: Tawaf Ifadah 7 putaran dan Sa'i Haji 7 perjalanan, mencapai Tahallul Tsani.",
                 ConfigJson = J(new { durasi = "20 menit", objective = "Selesaikan Tawaf Ifadah dan Sa'i Haji" }),
@@ -204,7 +228,7 @@ public static class DbSeeder
             },
             new()
             {
-                Urutan = 10, Nama = "Mabit di Mina & Tiga Jumrah",
+                Urutan = 11, Nama = "Mabit di Mina & Tiga Jumrah",
                 Lokasi = "Perkemahan Mina & Jamarat", Waktu = "Hari Tasyrik (11-13 Dzulhijjah)",
                 Deskripsi = "Mabit di tenda Mina dan melontar tiga jumrah (Ula, Wustha, Aqabah) berurutan, 21 batu per hari.",
                 ConfigJson = J(new { durasi = "20 menit", objective = "Lontar Ula, Wustha, Aqabah — 7 batu masing-masing" }),
@@ -224,7 +248,7 @@ public static class DbSeeder
             },
             new()
             {
-                Urutan = 11, Nama = "Tawaf Wada'",
+                Urutan = 12, Nama = "Tawaf Wada'",
                 Lokasi = "Mataf, Masjidil Haram", Waktu = "Menjelang subuh (biru fajar)",
                 Deskripsi = "Tawaf perpisahan 7 putaran sebelum meninggalkan Makkah — penutup seluruh rangkaian ibadah haji.",
                 ConfigJson = J(new { durasi = "15 menit", objective = "Selesaikan 7 putaran Tawaf Wada'" }),
@@ -313,50 +337,56 @@ public static class DbSeeder
                 new("Ibu yang kisahnya diabadikan dalam Sa'i adalah?", ["Siti Aisyah", "Siti Hajar", "Siti Maryam", "Siti Khadijah"], 1),
                 new("Air yang memancar atas pertolongan Allah untuk Siti Hajar adalah?", ["Air Zamzam", "Air hujan", "Air sungai", "Air laut"], 0),
                 new("Setelah Sa'i selesai, apa yang dilakukan?", ["Tahallul (potong rambut)", "Tidur", "Langsung pulang", "Wukuf"], 0)),
-            // Scene 07
-            Cp(byUrutan[7], 1, "Pengumpulan Batu", 3,
+            // Scene 07 — Wukuf di Arafah
+            Cp(byUrutan[7], 1, "Wukuf di Arafah", 3,
+                new("Apa rukun haji yang paling utama?", ["Wukuf di Arafah", "Tawaf Wada'", "Melontar jumrah", "Mabit di Mina"], 0),
+                new("Sabda Nabi tentang inti haji berbunyi?", ["\"Al-hajju Arafah\"", "\"Ash-shalaatu 'imaadud diin\"", "\"Innamal a'maalu binniyyaat\"", "\"Ath-thuhuuru syathrul iimaan\""], 0),
+                new("Kapan waktu wukuf di Arafah?", ["Sejak zawal 9 Dzulhijjah hingga fajar 10 Dzulhijjah", "Sepanjang Ramadhan", "Malam 1 Syawal", "Setiap Jumat"], 0),
+                new("Di masjid manakah khutbah dan sholat jama' saat Arafah?", ["Masjid Namirah", "Masjid Nabawi", "Masjidil Aqsa", "Masjid Quba"], 0)),
+            // Scene 08 — Muzdalifah
+            Cp(byUrutan[8], 1, "Pengumpulan Batu", 3,
                 new("Berapa minimal batu yang harus dikumpulkan?", ["3 butir", "7 butir", "21 butir", "100 butir"], 1),
                 new("Berapa jumlah batu yang dianjurkan untuk seluruh hari?", ["10 butir", "40 butir", "70 butir", "700 butir"], 2),
                 new("Ukuran batu yang ideal sebesar?", ["Bola tenis", "Biji kurma", "Kepalan tangan", "Butir pasir"], 1),
                 new("Batu ini digunakan untuk apa?", ["Melontar Jumrah", "Oleh-oleh", "Membangun tenda", "Menimbang bagasi"], 0)),
-            Cp(byUrutan[7], 2, "Mabit di Muzdalifah", 4,
+            Cp(byUrutan[8], 2, "Mabit di Muzdalifah", 4,
                 new("Apa hukum Mabit di Muzdalifah?", ["Sunnah", "Mubah", "Wajib Haji", "Makruh"], 2),
                 new("Sholat apa yang dilakukan di Muzdalifah?", ["Maghrib dan Isya dijama'", "Subuh saja", "Dhuha", "Tarawih"], 0),
                 new("Sampai kapan Mabit di Muzdalifah?", ["Hingga sebelum fajar/subuh", "1 jam saja", "Seminggu", "Sampai siang"], 0),
                 new("Setelah Muzdalifah, jamaah menuju?", ["Madinah", "Mina", "Jeddah", "Arafah"], 1),
                 new("Dzikir di Muzdalifah disebut dalam surat?", ["QS Al-Baqarah: 198", "QS Yasin: 1", "QS Al-Ikhlas: 2", "QS An-Nas: 3"], 0)),
-            // Scene 08
-            Cp(byUrutan[8], 1, "Melontar Jumrah", 3,
+            // Scene 09 — Mina: Jumrah Aqabah
+            Cp(byUrutan[9], 1, "Melontar Jumrah", 3,
                 new("Berapa kali melontar Jumrah Aqabah?", ["3 kali", "7 kali", "10 kali", "21 kali"], 1),
                 new("Bacaan saat melontar adalah?", ["Bismillahi Allahu Akbar", "Alhamdulillah", "Doa makan", "Salam"], 0),
                 new("Makna melontar Jumrah adalah?", ["Olahraga", "Melawan godaan setan", "Tradisi lokal", "Permainan"], 1),
                 new("Jumrah Aqabah melambangkan?", ["Godaan setan yang besar", "Bukit batu biasa", "Pintu masjid", "Batas kota"], 0)),
-            Cp(byUrutan[8], 2, "Tahallul Awal", 4,
+            Cp(byUrutan[9], 2, "Tahallul Awal", 4,
                 new("Apa itu Tahallul Awal?", ["Mencukur/memotong rambut", "Mandi besar", "Berpuasa", "Membayar zakat"], 0),
                 new("Minimal rambut yang dipotong?", ["1 helai", "3 helai", "10 helai", "Semua rambut wajib"], 1),
                 new("Larangan yang MASIH berlaku setelah Tahallul Awal?", ["Memakai baju", "Berhubungan suami istri", "Memakai parfum", "Memotong kuku"], 1),
                 new("Aktivitas setelah melontar Jumrah Aqabah adalah?", ["Tahallul", "Wukuf", "Sa'i", "Pulang"], 0),
                 new("Setelah Tahallul Awal, jamaah boleh memakai?", ["Pakaian biasa", "Hanya ihram", "Jas hujan", "Seragam"], 0)),
-            // Scene 09
-            Cp(byUrutan[9], 1, "Tawaf Ifadah", 3,
+            // Scene 10 — Tawaf Ifadah & Sa'i Haji
+            Cp(byUrutan[10], 1, "Tawaf Ifadah", 3,
                 new("Tawaf Ifadah disebut juga?", ["Tawaf Ziarah / Tawaf Rukun", "Tawaf Sunnah", "Tawaf Qudum", "Tawaf Wada'"], 0),
                 new("Apa hukum Tawaf Ifadah?", ["Sunnah", "Rukun Haji", "Mubah", "Makruh"], 1),
                 new("Tawaf Ifadah dilaksanakan setelah?", ["Kembali dari Mina", "Tiba di Jeddah", "Sebelum ihram", "Setelah pulang"], 0),
                 new("Perbedaan Tawaf Ifadah dan Tawaf Umrah?", ["Tawaf Ifadah adalah rukun Haji", "Jumlah putarannya beda", "Arahnya beda", "Tempatnya beda"], 0)),
-            Cp(byUrutan[9], 2, "Sa'i dan Tahallul Tsani", 3,
+            Cp(byUrutan[10], 2, "Sa'i dan Tahallul Tsani", 3,
                 new("Sa'i Haji dilaksanakan?", ["Setelah Tawaf Ifadah", "Sebelum wukuf", "Di Mina", "Di Muzdalifah"], 0),
                 new("Tahallul Tsani menggugurkan?", ["Seluruh larangan ihram", "Sebagian larangan", "Tidak ada", "Kewajiban sholat"], 0),
                 new("Setelah Tahallul Tsani, apa yang menjadi halal kembali?", ["Berhubungan suami istri", "Mencuri", "Berjudi", "Riba"], 0),
                 new("Rukun Haji ada berapa?", ["2", "3", "4 (Ihram, Wukuf, Tawaf, Sa'i)", "10"], 2)),
-            // Scene 10
-            Cp(byUrutan[10], 1, "Hari Tasyrik", 4,
+            // Scene 11 — Mabit Mina & Tiga Jumrah
+            Cp(byUrutan[11], 1, "Hari Tasyrik", 4,
                 new("Hari Tasyrik tanggal berapa?", ["8, 9, 10 Dzulhijjah", "11, 12, 13 Dzulhijjah", "1, 2, 3 Syawal", "15, 16, 17 Ramadhan"], 1),
                 new("Urutan melontar 3 Jumrah?", ["Aqabah → Wustha → Ula", "Ula → Wustha → Aqabah", "Bebas", "Wustha → Ula → Aqabah"], 1),
                 new("Total batu per hari?", ["7 butir", "14 butir", "21 butir", "70 butir"], 2),
                 new("Apakah berdoa setelah Jumrah Aqabah?", ["Ya, wajib", "Tidak", "Hanya hari pertama", "Hanya bila hujan"], 1),
                 new("Nafar Awal keluar dari Mina pada?", ["10 Dzulhijjah", "11 Dzulhijjah", "12 Dzulhijjah", "14 Dzulhijjah"], 2)),
-            // Scene 11
-            Cp(byUrutan[11], 1, "Tawaf Wada'", 4,
+            // Scene 12 — Tawaf Wada'
+            Cp(byUrutan[12], 1, "Tawaf Wada'", 4,
                 new("Apa hukum Tawaf Wada'?", ["Sunnah", "Wajib Haji", "Mubah", "Rukun Umrah"], 1),
                 new("Kapan Tawaf Wada' dilakukan?", ["Saat tiba di Makkah", "Saat akan meninggalkan Makkah", "Di Mina", "Setelah wukuf"], 1),
                 new("Berapa putaran Tawaf Wada'?", ["3 putaran", "5 putaran", "7 putaran", "9 putaran"], 2),

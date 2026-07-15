@@ -333,6 +333,9 @@ class Narrator {
  * ============================================================ */
 export const ACTIVE_CROWDS = [];
 const SKIN_TONES = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac, 0xa5673f];
+const CAP_COLORS = [0xffffff, 0xf2f2f2, 0x14202e, 0x22303f, 0x3a2d1a, 0x6b0f0f, 0x0e3b26, 0xd9c9a3];
+// Referensi engine aktif (dipakai Crowd untuk uji tembus dinding/blocker).
+let ACTIVE_ENGINE = null;
 
 export class Crowd {
     /**
@@ -346,35 +349,68 @@ export class Crowd {
             opts.count = Math.min(opts.count, opts.spots.length);
         }
         const count = opts.count;
-        // Pivot kaki di pinggul & lengan di bahu (geometri digeser) agar bisa diayun
-        const torsoGeo = new THREE.CapsuleGeometry(0.165, 0.4, 4, 10);
-        const headGeo = new THREE.SphereGeometry(0.115, 12, 10);
-        const legGeo = new THREE.CapsuleGeometry(0.07, 0.5, 3, 8);
-        legGeo.translate(0, -0.32, 0);
-        const armGeo = new THREE.CapsuleGeometry(0.048, 0.44, 3, 8);
-        armGeo.translate(0, -0.27, 0);
-        const clothMat = new THREE.MeshStandardMaterial({ roughness: 0.92 });
-        const pantsMat = new THREE.MeshStandardMaterial({ roughness: 0.95 });
-        const skinMat = new THREE.MeshStandardMaterial({ roughness: 0.65 });
-        this.torsos = new THREE.InstancedMesh(torsoGeo, clothMat, count);
-        this.heads = new THREE.InstancedMesh(headGeo, skinMat, count);
-        this.legL = new THREE.InstancedMesh(legGeo, pantsMat, count);
-        this.legR = new THREE.InstancedMesh(legGeo.clone(), pantsMat, count);
-        this.armL = new THREE.InstancedMesh(armGeo, clothMat, count);
-        this.armR = new THREE.InstancedMesh(armGeo.clone(), clothMat, count);
-        this.parts = [this.torsos, this.heads, this.legL, this.legR, this.armL, this.armR];
-        for (const p of this.parts) {
-            p.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-            p.castShadow = true;
-        }
+        // Geometri anatomis: pivot tiap tungkai di sendi atas (digeser) agar bisa diayun.
+        // Panjang segmen (pivot→sendi) — dipakai juga oleh FK di update().
+        this.L = { thigh: 0.42, shin: 0.44, uArm: 0.30, fArm: 0.28 };
+        const L = this.L;
+        // Batang tubuh meruncing: bahu lebar → pinggang ramping, dipipihkan di sumbu Z
+        const torsoGeo = new THREE.CylinderGeometry(0.195, 0.135, 0.44, 12, 1);
+        torsoGeo.scale(1, 1, 0.62);
+        const pelvisGeo = new THREE.CylinderGeometry(0.15, 0.135, 0.2, 10);
+        pelvisGeo.scale(1, 1, 0.72);
+        const neckGeo = new THREE.CylinderGeometry(0.05, 0.058, 0.11, 8);
+        const headGeo = new THREE.SphereGeometry(0.12, 16, 12);
+        headGeo.scale(0.9, 1.08, 1.0);
+        // Peci/kopiah/tudung — kubah rendah menempel di atas kepala
+        const capGeo = new THREE.SphereGeometry(0.128, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.54);
+        const thighGeo = new THREE.CapsuleGeometry(0.088, L.thigh - 0.176, 3, 8); thighGeo.translate(0, -L.thigh / 2, 0);
+        const shinGeo = new THREE.CapsuleGeometry(0.072, L.shin - 0.144, 3, 8); shinGeo.translate(0, -L.shin / 2, 0);
+        const footGeo = new THREE.BoxGeometry(0.11, 0.08, 0.27);
+        const uArmGeo = new THREE.CapsuleGeometry(0.056, L.uArm - 0.112, 3, 8); uArmGeo.translate(0, -L.uArm / 2, 0);
+        const fArmGeo = new THREE.CapsuleGeometry(0.05, L.fArm - 0.10, 3, 8); fArmGeo.translate(0, -L.fArm / 2, 0);
+        const handGeo = new THREE.SphereGeometry(0.062, 8, 6); handGeo.scale(1, 0.85, 1.2);
+
+        const outfitMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+        const pantsMat = new THREE.MeshStandardMaterial({ roughness: 0.93 });
+        const skinMat = new THREE.MeshStandardMaterial({ roughness: 0.6 });
+        const shoeMat = new THREE.MeshStandardMaterial({ color: 0x2a2a30, roughness: 0.7 });
+        const capMat = new THREE.MeshStandardMaterial({ roughness: 0.85 });
+        const im = (geo, mat) => {
+            const m = new THREE.InstancedMesh(geo, mat, count);
+            m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            m.castShadow = true;
+            return m;
+        };
+        // Bagian tubuh (L/R berbagi geometri; masing-masing instanceColor sendiri)
+        this.torso = im(torsoGeo, outfitMat);
+        this.pelvis = im(pelvisGeo, pantsMat);
+        this.neck = im(neckGeo, skinMat);
+        this.head = im(headGeo, skinMat);
+        this.cap = im(capGeo, capMat);
+        this.thighL = im(thighGeo, pantsMat); this.thighR = im(thighGeo, pantsMat);
+        this.shinL = im(shinGeo, pantsMat); this.shinR = im(shinGeo, pantsMat);
+        this.footL = im(footGeo, shoeMat); this.footR = im(footGeo, shoeMat);
+        this.uArmL = im(uArmGeo, outfitMat); this.uArmR = im(uArmGeo, outfitMat);
+        this.fArmL = im(fArmGeo, outfitMat); this.fArmR = im(fArmGeo, outfitMat);
+        this.handL = im(handGeo, skinMat); this.handR = im(handGeo, skinMat);
+        this.parts = [
+            this.torso, this.pelvis, this.neck, this.head, this.cap,
+            this.thighL, this.thighR, this.shinL, this.shinR, this.footL, this.footR,
+            this.uArmL, this.uArmR, this.fArmL, this.fArmR, this.handL, this.handR
+        ];
+        // Kelompok pewarnaan
+        this._outfitParts = [this.torso, this.uArmL, this.uArmR, this.fArmL, this.fArmR];
+        this._pantsParts = [this.pelvis, this.thighL, this.thighR, this.shinL, this.shinR];
+        this._skinParts = [this.head, this.neck, this.handL, this.handR];
+
         this.agents = [];
         const colors = opts.colors || [0xffffff];
-        const cOutfit = new THREE.Color(), cPants = new THREE.Color(), cSkin = new THREE.Color();
+        const cOutfit = new THREE.Color(), cPants = new THREE.Color(), cSkin = new THREE.Color(), cCap = new THREE.Color();
         for (let i = 0; i < count; i++) {
             const a = {
                 phase: Math.random() * Math.PI * 2,
                 speed: 0.7 + Math.random() * 0.5,
-                s: 0.92 + Math.random() * 0.14
+                s: 0.94 + Math.random() * 0.13
             };
             if (opts.mode === 'orbit') {
                 a.r = opts.rMin + Math.random() * (opts.rMax - opts.rMin);
@@ -403,19 +439,23 @@ export class Crowd {
                 a.heading = Math.random() * Math.PI * 2;
                 a.sit = opts.mode === 'sit';
             }
+            a.wx = a.x ?? 0; a.wz = a.z ?? 0;
             this.agents.push(a);
+
             cOutfit.setHex(colors[Math.floor(Math.random() * colors.length)]);
             // pakaian terang (ihram) = jubah sewarna; pakaian gelap = celana lebih gelap
             const lum = cOutfit.r * 0.3 + cOutfit.g * 0.6 + cOutfit.b * 0.1;
-            if (lum > 0.72) cPants.copy(cOutfit).multiplyScalar(0.93);
-            else cPants.copy(cOutfit).multiplyScalar(0.35 + Math.random() * 0.2);
+            const ihramLike = lum > 0.72;
+            if (ihramLike) cPants.copy(cOutfit).multiplyScalar(0.95);
+            else cPants.copy(cOutfit).multiplyScalar(0.32 + Math.random() * 0.22);
             cSkin.setHex(SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)]);
-            this.torsos.setColorAt(i, cOutfit);
-            this.armL.setColorAt(i, cOutfit);
-            this.armR.setColorAt(i, cOutfit);
-            this.legL.setColorAt(i, cPants);
-            this.legR.setColorAt(i, cPants);
-            this.heads.setColorAt(i, cSkin);
+            // Tutup kepala: jamaah ihram tak bertutup; selainnya ± kopiah/peci warna acak
+            a.cap = !ihramLike && Math.random() < 0.55;
+            cCap.setHex(CAP_COLORS[Math.floor(Math.random() * CAP_COLORS.length)]);
+            for (const p of this._outfitParts) p.setColorAt(i, cOutfit);
+            for (const p of this._pantsParts) p.setColorAt(i, cPants);
+            for (const p of this._skinParts) p.setColorAt(i, cSkin);
+            this.cap.setColorAt(i, cCap);
         }
         for (const p of this.parts) {
             if (p.instanceColor) p.instanceColor.needsUpdate = true;
@@ -423,30 +463,62 @@ export class Crowd {
         scene.add(...this.parts);
         this._m = new THREE.Matrix4();
         this._p = new THREE.Vector3();
-        this._q = new THREE.Quaternion();
-        this._qSwing = new THREE.Quaternion();
         this._s = new THREE.Vector3(1, 1, 1);
         this._up = new THREE.Vector3(0, 1, 0);
-        this._right = new THREE.Vector3(1, 0, 0);
+        this._axR = new THREE.Vector3(1, 0, 0);
+        this._qYaw = new THREE.Quaternion();
+        this._qSwing = new THREE.Quaternion();
+        this._qa = new THREE.Quaternion();
+        this._qb = new THREE.Quaternion();
+        this._v1 = new THREE.Vector3();
+        this._v2 = new THREE.Vector3();
+        this._v3 = new THREE.Vector3();
         ACTIVE_CROWDS.push(this);
         this.update(0, 0);
     }
-    /** Tempatkan satu bagian tubuh: offset lokal diputar sesuai heading. */
-    _place(mesh, i, x, y, z, ox, oy, oz, qYaw, swing, sc) {
-        this._p.set(ox * sc, 0, oz * sc).applyQuaternion(qYaw);
-        if (swing !== 0) {
-            this._qSwing.setFromAxisAngle(this._right, swing);
-            this._q.copy(qYaw).multiply(this._qSwing);
-        } else {
-            this._q.copy(qYaw);
-        }
+
+    /** Susun matriks satu bagian dari posisi dunia + orientasi + skala seragam. */
+    _compose(mesh, i, px, py, pz, quat, sc) {
+        this._p.set(px, py, pz);
         this._s.setScalar(sc);
-        this._m.compose(this._p.set(x + this._p.x, y + oy * sc, z + this._p.z), this._q, this._s);
+        this._m.compose(this._p, quat, this._s);
         mesh.setMatrixAt(i, this._m);
     }
+
+    /**
+     * Tungkai dua-ruas ber-FK: segmen1 (paha/lengan-atas), segmen2 (betis/lengan-bawah),
+     * dan ujung (kaki/tangan). Semua berputar mengikuti yaw badan.
+     */
+    _limb(seg1, seg2, endM, i, rx, ry, rz, ox, oz, L1, L2, sw1, bend, endFlat, qYaw, sc) {
+        const root = this._v1, joint = this._v2, dir = this._v3;
+        // sendi atas (bahu/pinggul) di ruang dunia
+        root.set(ox * sc, 0, oz * sc).applyQuaternion(qYaw);
+        root.set(rx + root.x, ry, rz + root.z);
+        // segmen 1 — mengayun sw1 terhadap sumbu kanan lalu diputar yaw
+        this._qSwing.setFromAxisAngle(this._axR, sw1);
+        this._qa.copy(qYaw).multiply(this._qSwing);
+        this._compose(seg1, i, root.x, root.y, root.z, this._qa, sc);
+        // sendi bawah (lutut/siku)
+        dir.set(0, -1, 0).applyQuaternion(this._qa);
+        joint.copy(root).addScaledVector(dir, L1 * sc);
+        // segmen 2 — menekuk relatif (bend) di sendi bawah
+        this._qSwing.setFromAxisAngle(this._axR, sw1 + bend);
+        this._qb.copy(qYaw).multiply(this._qSwing);
+        this._compose(seg2, i, joint.x, joint.y, joint.z, this._qb, sc);
+        if (!endM) return;
+        dir.set(0, -1, 0).applyQuaternion(this._qb);
+        root.copy(joint).addScaledVector(dir, L2 * sc); // ujung ruas (pergelangan/mata kaki)
+        if (endFlat) {
+            // telapak kaki rata di lantai, sedikit maju ke arah hadap
+            joint.set(0, 0, 0.06 * sc).applyQuaternion(qYaw);
+            this._compose(endM, i, root.x + joint.x, Math.max(0.045 * sc, root.y + 0.015 * sc), root.z + joint.z, qYaw, sc);
+        } else {
+            this._compose(endM, i, root.x, root.y, root.z, this._qb, sc);
+        }
+    }
+
     update(dt, time) {
-        const o = this.opts;
-        const qYaw = new THREE.Quaternion();
+        const o = this.opts, L = this.L, qYaw = this._qYaw;
         for (let i = 0; i < this.agents.length; i++) {
             const a = this.agents[i];
             let x, z, heading = a.heading ?? 0, moving = false;
@@ -485,40 +557,72 @@ export class Crowd {
                     if (dh > Math.PI) dh -= Math.PI * 2;
                     if (dh < -Math.PI) dh += Math.PI * 2;
                     a.heading += dh * Math.min(1, dt * 4);
-                    a.x += Math.sin(a.heading) * a.v * dt;
-                    a.z += Math.cos(a.heading) * a.v * dt;
-                    moving = true;
+                    const nx = a.x + Math.sin(a.heading) * a.v * dt;
+                    const nz = a.z + Math.cos(a.heading) * a.v * dt;
+                    // Solid: jangan menembus dinding/blocker — bila terhalang, pilih tujuan baru
+                    const eng = ACTIVE_ENGINE;
+                    if (eng && !eng._walkableStatic(nx, nz)) {
+                        a.tx = o.area.x + (Math.random() - 0.5) * o.area.w;
+                        a.tz = o.area.z + (Math.random() - 0.5) * o.area.d;
+                        a.dwell = 0.3 + Math.random();
+                    } else {
+                        a.x = nx; a.z = nz;
+                        moving = true;
+                    }
                 }
                 x = a.x; z = a.z; heading = a.heading;
             } else {
                 x = a.x; z = a.z;
             }
+            a.wx = x; a.wz = z;
+
             const sc = a.s;
             const wp = time * 5.5 * a.speed + a.phase;
-            const bob = moving ? Math.abs(Math.sin(wp)) * 0.045 : Math.sin(time * 1.4 + a.phase) * 0.008;
-            const legSwing = moving ? Math.sin(wp) * 0.55 : 0;
-            const armSwing = moving ? -Math.sin(wp) * 0.4 : Math.sin(time * 1.4 + a.phase) * 0.03;
             qYaw.setFromAxisAngle(this._up, heading);
+
             if (a.sit) {
-                // duduk: paha horizontal ke depan, badan rendah
-                const hip = (o.sitY ?? 0.28) * sc;
-                this._place(this.legL, i, x, hip, z, -0.09, 0, 0.06, qYaw, 1.35, sc);
-                this._place(this.legR, i, x, hip, z, 0.09, 0, 0.06, qYaw, 1.35, sc);
-                this._place(this.torsos, i, x, hip + 0.31 * sc, z, 0, 0, 0, qYaw, 0, sc);
-                this._place(this.heads, i, x, hip + 0.81 * sc, z, 0, 0, 0, qYaw, 0, sc);
-                this._place(this.armL, i, x, hip + 0.62 * sc, z, -0.225, 0, 0, qYaw, 0.55, sc);
-                this._place(this.armR, i, x, hip + 0.62 * sc, z, 0.225, 0, 0, qYaw, 0.55, sc);
+                // Duduk: paha maju mendatar, betis turun, badan tegak.
+                const base = (o.sitY ?? 0.46);
+                const hipY = base * sc, shoY = (base + 0.48) * sc;
+                this._limb(this.thighL, this.shinL, this.footL, i, x, hipY, z, -0.1, 0.02, L.thigh, L.shin, 1.45, -1.5, true, qYaw, sc);
+                this._limb(this.thighR, this.shinR, this.footR, i, x, hipY, z, 0.1, 0.02, L.thigh, L.shin, 1.45, -1.5, true, qYaw, sc);
+                this._compose(this.pelvis, i, x, (base + 0.06) * sc, z, qYaw, sc);
+                this._compose(this.torso, i, x, (base + 0.28) * sc, z, qYaw, sc);
+                this._compose(this.neck, i, x, (base + 0.55) * sc, z, qYaw, sc);
+                this._compose(this.head, i, x, (base + 0.68) * sc, z, qYaw, sc);
+                this._capAt(a, i, x, (base + 0.72) * sc, z, qYaw, sc);
+                // lengan bersandar di paha
+                this._limb(this.uArmL, this.fArmL, this.handL, i, x, shoY, z, -0.23, 0, L.uArm, L.fArm, 0.6, 0.85, false, qYaw, sc);
+                this._limb(this.uArmR, this.fArmR, this.handR, i, x, shoY, z, 0.23, 0, L.uArm, L.fArm, 0.6, 0.85, false, qYaw, sc);
             } else {
-                const hip = (0.66 + bob) * sc;
-                this._place(this.legL, i, x, hip, z, -0.09, 0, 0, qYaw, legSwing, sc);
-                this._place(this.legR, i, x, hip, z, 0.09, 0, 0, qYaw, -legSwing, sc);
-                this._place(this.torsos, i, x, hip + 0.31 * sc, z, 0, 0, 0, qYaw, 0, sc);
-                this._place(this.heads, i, x, hip + 0.81 * sc, z, 0, 0, 0, qYaw, 0, sc);
-                this._place(this.armL, i, x, hip + 0.62 * sc, z, -0.225, 0, 0, qYaw, armSwing, sc);
-                this._place(this.armR, i, x, hip + 0.62 * sc, z, 0.225, 0, 0, qYaw, -armSwing, sc);
+                const bob = moving ? Math.abs(Math.sin(wp)) * 0.05 : Math.sin(time * 1.4 + a.phase) * 0.006;
+                const base = 0.94 + bob;
+                const hipY = base * sc, shoY = (base + 0.48) * sc;
+                // Kaki: ayun pinggul berlawanan + tekuk lutut saat melangkah maju
+                const swL = moving ? Math.sin(wp) * 0.42 : 0;
+                const swR = moving ? Math.sin(wp + Math.PI) * 0.42 : 0;
+                const kneeL = moving ? Math.max(0, Math.sin(wp + 1.1)) * 0.85 : 0.05;
+                const kneeR = moving ? Math.max(0, Math.sin(wp + Math.PI + 1.1)) * 0.85 : 0.05;
+                this._limb(this.thighL, this.shinL, this.footL, i, x, hipY, z, -0.1, 0, L.thigh, L.shin, swL, kneeL, true, qYaw, sc);
+                this._limb(this.thighR, this.shinR, this.footR, i, x, hipY, z, 0.1, 0, L.thigh, L.shin, swR, kneeR, true, qYaw, sc);
+                this._compose(this.pelvis, i, x, (base + 0.02) * sc, z, qYaw, sc);
+                this._compose(this.torso, i, x, (base + 0.28) * sc, z, qYaw, sc);
+                this._compose(this.neck, i, x, (base + 0.55) * sc, z, qYaw, sc);
+                this._compose(this.head, i, x, (base + 0.69) * sc, z, qYaw, sc);
+                this._capAt(a, i, x, (base + 0.73) * sc, z, qYaw, sc);
+                // Lengan: ayun berlawanan kaki + siku sedikit menekuk
+                const aSw = moving ? -Math.sin(wp) * 0.38 : Math.sin(time * 1.4 + a.phase) * 0.03;
+                this._limb(this.uArmL, this.fArmL, this.handL, i, x, shoY, z, -0.23, 0, L.uArm, L.fArm, aSw, 0.28, false, qYaw, sc);
+                this._limb(this.uArmR, this.fArmR, this.handR, i, x, shoY, z, 0.23, 0, L.uArm, L.fArm, -aSw, 0.28, false, qYaw, sc);
             }
         }
         for (const p of this.parts) p.instanceMatrix.needsUpdate = true;
+    }
+
+    /** Tutup kepala: tampil bila a.cap, selainnya diciutkan (skala 0). */
+    _capAt(a, i, x, y, z, qYaw, sc) {
+        if (a.cap) this._compose(this.cap, i, x, y, z, qYaw, sc);
+        else this._compose(this.cap, i, x, y, z, qYaw, 0);
     }
 }
 
@@ -545,6 +649,17 @@ export class Engine {
             60, container.clientWidth / container.clientHeight, 0.1, 1200);
         this.camera.position.set(0, 1.7, 5);
 
+        // WebXR (§8): kamera dijadikan anak "dolly"/rig. Di desktop dolly diam di
+        // origin (identity) → seluruh kode kamera lama tetap berjalan apa adanya
+        // (world == local). Di sesi VR, pose headset diterapkan relatif ke parent
+        // kamera (three.WebXRManager: cameraXR = parent.matrixWorld * pose), sehingga
+        // memindah dolly = memindah pemain. Lihat _initVR / _onXRStart / _moveVR.
+        this.renderer.xr.enabled = true;
+        this.dolly = new THREE.Group();
+        this.dolly.name = 'xr-rig';
+        this.dolly.add(this.camera);
+        this.scene.add(this.dolly);
+
         // Post-processing: bloom halus agar lampu & emissive bercahaya
         this.composer = new EffectComposer(this.renderer);
         this.composer.setPixelRatio(this.renderer.getPixelRatio());
@@ -569,6 +684,8 @@ export class Engine {
         this.walkRects = [];
         this.walkCircles = [];
         this.blockers = [];
+        this.playerRadius = 0.3;   // radius tabrakan pemain (kapsul) untuk collision solid
+        ACTIVE_ENGINE = this;      // agar Crowd bisa menguji tembus dinding
         this.uiOpen = false;
         this.paused = false;
         this._hover = null;
@@ -660,6 +777,7 @@ export class Engine {
         document.addEventListener('mousemove', this._onMouseMove);
         document.addEventListener('mouseup', this._onMouseUp);
         this.renderer.domElement.style.cursor = 'crosshair';
+        this._initVR();
         this.renderer.setAnimationLoop(() => this._tick());
     }
 
@@ -782,7 +900,8 @@ export class Engine {
     addBlocker(x1, z1, x2, z2) {
         this.blockers.push({ x1: Math.min(x1, x2), z1: Math.min(z1, z2), x2: Math.max(x1, x2), z2: Math.max(z1, z2) });
     }
-    _walkable(x, z) {
+    /** Bisa dilewati secara geometri statis (blocker + area jalan). Tanpa kerumunan. */
+    _walkableStatic(x, z) {
         for (const b of this.blockers) {
             if (x > b.x1 && x < b.x2 && z > b.z1 && z < b.z2) return false;
         }
@@ -795,6 +914,25 @@ export class Engine {
             if (d <= c.rOuter && d >= c.rInner) return true;
         }
         return false;
+    }
+    /** Terhalang figur kerumunan? (collision solid pemain ↔ jamaah). */
+    _crowdBlocks(x, z) {
+        // jarak pusat-ke-pusat: radius pemain + radius kapsul jamaah (± 0.3 m, §4.1)
+        const rr = this.playerRadius + 0.28, rr2 = rr * rr;
+        for (const c of ACTIVE_CROWDS) {
+            const agents = c.agents;
+            for (let i = 0; i < agents.length; i++) {
+                const a = agents[i];
+                if (a.sit) continue; // yang duduk sudah berada di zona blocker bangku
+                const dx = x - a.wx, dz = z - a.wz;
+                if (dx * dx + dz * dz < rr2) return true;
+            }
+        }
+        return false;
+    }
+    /** Bisa ditempati pemain: geometri statis DAN tidak menembus jamaah. */
+    _walkable(x, z) {
+        return this._walkableStatic(x, z) && !this._crowdBlocks(x, z);
     }
 
     _movePlayer(dt) {
@@ -822,6 +960,144 @@ export class Engine {
             else p.copy(prev);
         }
         p.y = 1.7;
+    }
+
+    /* ============ WebXR / VR (§8) ============ */
+
+    /** Siapkan tombol "Enter VR", controller, dan handler sesi. Aman di non-VR. */
+    _initVR() {
+        this._vrButton = null;
+        this._xrControllers = [];
+        // Tombol Enter VR (mandiri, tanpa addon eksternal)
+        const btn = document.createElement('button');
+        btn.className = 'vr-enter-btn';
+        btn.textContent = 'VR';
+        btn.style.cssText = [
+            'position:fixed', 'bottom:20px', 'left:50%', 'transform:translateX(-50%)',
+            'z-index:45', 'padding:10px 22px', 'font:600 14px/1 "Segoe UI",sans-serif',
+            'letter-spacing:1px', 'color:#0d1a12', 'background:#e8c96a', 'border:0',
+            'border-radius:24px', 'cursor:pointer', 'box-shadow:0 4px 14px rgba(0,0,0,.4)'
+        ].join(';');
+        this.container.appendChild(btn);
+        this._vrButton = btn;
+
+        const xr = navigator.xr;
+        if (!xr || !xr.isSessionSupported) {
+            btn.textContent = 'VR TAK DIDUKUNG';
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            return;
+        }
+        xr.isSessionSupported('immersive-vr').then(supported => {
+            if (!supported) {
+                btn.textContent = 'VR TAK TERSEDIA';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+                return;
+            }
+            btn.textContent = '🥽 ENTER VR';
+            let currentSession = null;
+            btn.onclick = async () => {
+                if (currentSession) { currentSession.end(); return; }
+                try {
+                    const session = await xr.requestSession('immersive-vr', {
+                        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking', 'layers']
+                    });
+                    currentSession = session;
+                    session.addEventListener('end', () => { currentSession = null; btn.textContent = '🥽 ENTER VR'; });
+                    btn.textContent = '⏹ EXIT VR';
+                    this.renderer.xr.setReferenceSpaceType('local-floor');
+                    await this.renderer.xr.setSession(session);
+                } catch (e) {
+                    console.error('Gagal memulai sesi VR:', e);
+                    btn.textContent = 'VR GAGAL';
+                }
+            };
+        }).catch(() => {
+            btn.textContent = 'VR TAK TERSEDIA';
+            btn.disabled = true;
+        });
+
+        // Controller Quest 2 (kiri & kanan) + sinar penunjuk, dipasang di dolly.
+        const rayGeo = new THREE.BufferGeometry().setFromPoints(
+            [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+        for (let i = 0; i < 2; i++) {
+            const controller = this.renderer.xr.getController(i);
+            controller.add(new THREE.Line(rayGeo,
+                new THREE.LineBasicMaterial({ color: 0xffd75e, transparent: true, opacity: 0.8 })));
+            controller.userData.ray = controller.children[0];
+            controller.userData.ray.scale.z = 6;
+            controller.addEventListener('selectstart', () => this._onVRSelect(controller));
+            this.dolly.add(controller);
+            const grip = this.renderer.xr.getControllerGrip(i);
+            grip.add(new THREE.Mesh(
+                new THREE.BoxGeometry(0.045, 0.045, 0.12),
+                new THREE.MeshStandardMaterial({ color: 0x222228, roughness: 0.6 })));
+            this.dolly.add(grip);
+            this._xrControllers.push(controller);
+        }
+
+        this.renderer.xr.addEventListener('sessionstart', () => this._onXRStart());
+        this.renderer.xr.addEventListener('sessionend', () => this._onXREnd());
+    }
+
+    /** Saat sesi VR mulai: pindahkan posisi pemain (dunia) ke dolly, kamera lokal di-nol. */
+    _onXRStart() {
+        const p = this.camera.position;
+        const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+        this.dolly.position.set(p.x, 0, p.z); // kaki di lantai; tinggi dari headset (local-floor)
+        this.dolly.rotation.set(0, e.y, 0);
+        this.camera.position.set(0, 0, 0);    // pose diambil alih headset
+        this.setHint('Mode VR aktif · dorong thumbstick kiri untuk berjalan · trigger untuk berinteraksi');
+    }
+
+    /** Saat keluar VR: kembalikan posisi ke kamera desktop (kontinu dari lokasi terakhir). */
+    _onXREnd() {
+        const p = this.dolly.position;
+        this.camera.position.set(p.x, 1.7, p.z);
+        this.camera.quaternion.setFromEuler(new THREE.Euler(0, this.dolly.rotation.y, 0, 'YXZ'));
+        this.dolly.position.set(0, 0, 0);
+        this.dolly.rotation.set(0, 0, 0);
+    }
+
+    /** Lokomosi VR: thumbstick kiri menggeser dolly, relatif arah pandang headset, dengan collision. */
+    _moveVR(dt) {
+        const session = this.renderer.xr.getSession && this.renderer.xr.getSession();
+        if (!session || this.uiOpen) return;
+        let mx = 0, my = 0;
+        for (const src of session.inputSources) {
+            if (!src.gamepad || (src.handedness !== 'left' && src.handedness !== 'none')) continue;
+            const ax = src.gamepad.axes;
+            mx += ax.length >= 4 ? ax[2] : (ax[0] || 0);
+            my += ax.length >= 4 ? ax[3] : (ax[1] || 0);
+        }
+        if (Math.abs(mx) < 0.15 && Math.abs(my) < 0.15) return;
+        const cam = this.renderer.xr.getCamera();
+        const e = new THREE.Euler().setFromQuaternion(cam.quaternion, 'YXZ');
+        const sinY = Math.sin(e.y), cosY = Math.cos(e.y);
+        const f = -my, s = mx; // thumbstick atas = maju (-Z)
+        const speed = this.playerSpeed;
+        const nx = this.dolly.position.x + (f * -sinY + s * cosY) * speed * dt;
+        const nz = this.dolly.position.z + (f * -cosY + s * -sinY) * speed * dt;
+        if (this._walkable(nx, nz)) { this.dolly.position.x = nx; this.dolly.position.z = nz; }
+        else if (this._walkable(nx, this.dolly.position.z)) this.dolly.position.x = nx;
+        else if (this._walkable(this.dolly.position.x, nz)) this.dolly.position.z = nz;
+    }
+
+    /** Trigger controller → raycast ke objek interaktif lalu klik (reuse alur desktop). */
+    _onVRSelect(controller) {
+        if (this.uiOpen || this.interactables.length === 0) return;
+        const m = new THREE.Matrix4().extractRotation(controller.matrixWorld);
+        this._raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+        this._raycaster.ray.direction.set(0, 0, -1).applyMatrix4(m);
+        this._raycaster.far = 30;
+        const hits = this._raycaster.intersectObjects(this.interactables, true);
+        for (const h of hits) {
+            const root = h.object.userData.interactRoot;
+            if (root && root.userData.interact?.enabled) { this._hover = root; this._handleClick(); return; }
+        }
     }
 
     /* ------------ Interaksi (hover + klik) ------------ */
@@ -1102,8 +1378,9 @@ export class Engine {
     _tick() {
         const dt = Math.min(this.clock.getDelta(), 0.05);
         const t = this.clock.elapsedTime;
+        const inVR = this.renderer.xr.isPresenting;
         if (!this.paused) {
-            this._movePlayer(dt);
+            if (inVR) this._moveVR(dt); else this._movePlayer(dt);
             for (const c of ACTIVE_CROWDS) c.update(dt, t);
             for (let i = this.updaters.length - 1; i >= 0; i--) {
                 const u = this.updaters[i];
@@ -1124,7 +1401,10 @@ export class Engine {
             }
             this._drawMinimap();
         }
-        this.composer.render();
+        // EffectComposer tidak kompatibel dengan framebuffer WebXR (merusak stereo),
+        // maka saat sesi VR aktif kita render langsung (tanpa bloom/postprocessing).
+        if (inVR) this.renderer.render(this.scene, this.camera);
+        else this.composer.render();
     }
 
     resize() {
@@ -1148,6 +1428,10 @@ export class Engine {
     dispose() {
         this.renderer.setAnimationLoop(null);
         ACTIVE_CROWDS.length = 0;
+        if (ACTIVE_ENGINE === this) ACTIVE_ENGINE = null;
+        // Bersihkan WebXR: akhiri sesi & lepas tombol Enter VR
+        try { this.renderer.xr.getSession()?.end(); } catch { }
+        if (this._vrButton) { this._vrButton.remove(); this._vrButton = null; }
         this.narrator.stop();
         document.removeEventListener('keydown', this._onKeyDown);
         document.removeEventListener('keyup', this._onKeyUp);

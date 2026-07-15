@@ -1,5 +1,5 @@
 /**
- * VR Education Haji & Umrah — Definisi 11 Scene
+ * VR Education Haji & Umrah — Definisi 12 Scene (termasuk Wukuf Arafah)
  * Setiap scene: { env, ambient, build(engine), run(engine, ctx) }
  * ctx: { checkpoint(n), complete(), progress(pct) }
  * Alur mengikuti dokumen protokol 02..12 (Activity Flow).
@@ -494,7 +494,61 @@ const scene06 = {
 };
 
 /* ============================================================
- * SCENE 07 — MUZDALIFAH (MALAM)
+ * SCENE 07 — WUKUF DI ARAFAH (puncak ibadah haji, 9 Dzulhijjah)
+ * ============================================================ */
+const sceneArafah = {
+    env: 'goldenHour', ambient: 'crowd',
+    build(engine) {
+        const refs = B.arafah(engine);
+        // Jamaah wukuf — berdiri berdoa & duduk berdzikir di padang (ihram)
+        new Crowd(engine.scene, { count: 90, mode: 'idle', area: { x: 10, z: 10, w: 90, d: 60 }, colors: IHRAM });
+        new Crowd(engine.scene, { count: 40, mode: 'sit', area: { x: -20, z: 30, w: 40, d: 30 }, colors: IHRAM });
+        engine.spawn(14, 26, 38);
+        return refs;
+    },
+    async run(engine, ctx) {
+        await engine.narrate(
+            'Inilah Padang Arafah pada sembilan Dzulhijjah — puncak dan rukun terbesar ibadah haji. Rasulullah bersabda: Al-hajju Arafah — haji itu (wukufnya di) Arafah. Barangsiapa tidak wukuf di Arafah, hajinya tidak sah.',
+            { sub: '🌄 Padang Arafah, 9 Dzulhijjah — "Al-hajju Arafah". Wukuf = rukun terbesar haji.' });
+        ctx.progress(15);
+
+        await engine.narrate(
+            'Wukuf dimulai setelah matahari tergelincir (zawal) hingga terbit fajar. Setelah khutbah dan sholat Dzuhur–Ashar dijama\' qashar di Masjid Namirah, jamaah memperbanyak doa, dzikir, dan istighfar menghadap kiblat.',
+            { sub: '🕌 Masjid Namirah: khutbah + Dzuhur-Ashar jama\' qashar. Perbanyak doa hingga maghrib.' });
+        ctx.progress(30);
+
+        const jp = engine._sceneRefs.jabalPos;
+        await engine.goto(jp.x + 20, jp.z + 20, { radius: 5, label: 'Menuju Jabal Rahmah — memperbanyak doa saat wukuf' });
+        engine.setObjective('Wukuf: berdiri/duduk menghadap kiblat, perbanyak doa hingga terbenam matahari');
+        engine.setHint('Inilah waktu doa paling mustajab sepanjang tahun — mintalah kebaikan dunia & akhirat');
+
+        // Momen wukuf — untaian doa & dzikir berjalan otomatis (kontemplasi)
+        const duas = [
+            { t: 'Doa terbaik adalah doa pada hari Arafah. Sebaik-baik ucapan: Laa ilaaha illallah wahdahu laa syariika lah, lahul mulku wa lahul hamdu wa huwa \'alaa kulli syai\'in qadiir.', s: '🤲 "Laa ilaaha illallah wahdahu laa syariika lah, lahul mulku wa lahul hamd…"' },
+            { t: 'Rabbana atina fid dunya hasanah wa fil akhirati hasanah wa qina adzaban nar.', s: '📿 "Rabbanaa aatinaa fid-dunyaa hasanah wa fil-aakhirati hasanah wa qinaa \'adzaaban-naar"' },
+            { t: 'Perbanyak istighfar dan doa untuk diri, keluarga, dan seluruh kaum muslimin. Menangislah karena takut dan harap kepada Allah.', s: '💧 Perbanyak istighfar & doa untuk diri, keluarga, dan umat.' }
+        ];
+        for (let i = 0; i < duas.length; i++) {
+            await engine.narrate(duas[i].t, { sub: duas[i].s });
+            ctx.progress(40 + i * 12);
+        }
+        engine.setObjective('');
+        engine.setHint('');
+        engine.audio.sfx('chime');
+
+        await ctx.checkpoint(1);
+        ctx.progress(85);
+
+        await engine.narrate(
+            'Matahari mulai terbenam. Dengan terbenamnya matahari, wukuf sempurna. Setelah maghrib jamaah bergerak menuju Muzdalifah untuk mabit — tanpa sholat maghrib dulu, karena akan dijama\' di Muzdalifah.',
+            { sub: '🌇 Matahari terbenam — wukuf sempurna. Bertolak ke Muzdalifah (maghrib dijama\' di sana).' });
+        ctx.progress(100);
+        await ctx.complete();
+    }
+};
+
+/* ============================================================
+ * SCENE 08 — MUZDALIFAH (MALAM)
  * ============================================================ */
 const scene07 = {
     env: 'night', ambient: 'night',
@@ -759,7 +813,10 @@ const scene11 = {
     }
 };
 
+// Urutan kronologis haji tamattu' (§7). Wukuf Arafah disisipkan sebagai scene 7,
+// menggeser Muzdalifah..Tawaf Wada' ke 8..12. (Nama variabel scene07..scene11 tetap
+// merujuk isi lamanya: Muzdalifah, Mina Aqabah, Tawaf Ifadah, Mabit Mina, Tawaf Wada'.)
 export const SCENES = {
-    1: scene01, 2: scene02, 3: scene03, 4: scene04, 5: scene05,
-    6: scene06, 7: scene07, 8: scene08, 9: scene09, 10: scene10, 11: scene11
+    1: scene01, 2: scene02, 3: scene03, 4: scene04, 5: scene05, 6: scene06,
+    7: sceneArafah, 8: scene07, 9: scene08, 10: scene09, 11: scene10, 12: scene11
 };
