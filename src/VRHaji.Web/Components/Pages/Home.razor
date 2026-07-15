@@ -1,0 +1,95 @@
+@page "/"
+@inject ISceneService SceneService
+@inject IProgressService ProgressService
+@inject IJSRuntime JS
+
+<PageTitle>VR Education Haji &amp; Umrah</PageTitle>
+
+<div class="menu-root">
+    <div class="menu-hero">
+        <div class="menu-hero__emblem">🕋</div>
+        <h1 class="menu-hero__title">VR Education Haji &amp; Umrah</h1>
+        <p class="menu-hero__subtitle">
+            Simulasi interaktif rangkaian ibadah Haji dan Umrah — dari keberangkatan di Indonesia
+            hingga Tawaf Wada' — dengan visual 3D imersif, narasi, dan validasi pemahaman.
+        </p>
+        @if (_totalDone > 0)
+        {
+            <div class="menu-hero__progress">
+                <div class="menu-hero__progress-bar"><span style="width:@(_totalDone * 100 / 11)%"></span></div>
+                <span class="menu-hero__progress-text">@_totalDone / 11 scene selesai</span>
+                <button class="btn btn--ghost btn--small" @onclick="ResetProgress">Ulangi dari awal</button>
+            </div>
+        }
+    </div>
+
+    <div class="menu-grid">
+        @foreach (var scene in _scenes)
+        {
+            var unlocked = scene.Urutan <= _highest + 1;
+            var done = _completedScenes.Contains(scene.Id);
+            <div class="scene-card @(unlocked ? "" : "scene-card--locked") @(done ? "scene-card--done" : "")">
+                <div class="scene-card__badge">@(done ? "✔" : unlocked ? scene.Urutan.ToString("00") : "🔒")</div>
+                <div class="scene-card__body">
+                    <div class="scene-card__eyebrow">Scene @scene.Urutan.ToString("00") · @scene.Lokasi</div>
+                    <h3 class="scene-card__title">@scene.Nama</h3>
+                    <p class="scene-card__desc">@scene.Deskripsi</p>
+                </div>
+                <div class="scene-card__footer">
+                    <span class="scene-card__time">🕐 @scene.Waktu</span>
+                    @if (unlocked)
+                    {
+                        <a class="btn btn--gold" href="/scene/@scene.Urutan">@(done ? "Ulangi" : "Mulai") ➜</a>
+                    }
+                    else
+                    {
+                        <span class="scene-card__lockmsg">Selesaikan scene sebelumnya</span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <footer class="menu-footer">
+        Blazor Server (.NET 9) · Three.js WebGL 2.0 · Konten mengikuti dokumen protokol VR Education Haji &amp; Umrah v1.0
+    </footer>
+</div>
+
+@code {
+    private IReadOnlyList<SceneData> _scenes = [];
+    private HashSet<int> _completedScenes = [];
+    private int _highest;
+    private int _totalDone;
+    private string _userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _scenes = await SceneService.GetAllScenesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/user.js");
+        _userId = await module.InvokeAsync<string>("getUserId");
+        await LoadProgressAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadProgressAsync()
+    {
+        var progress = await ProgressService.GetProgressAsync(_userId);
+        _completedScenes = progress.Where(p => p.Completed && p.CheckpointId == 0)
+            .Select(p => p.SceneId).ToHashSet();
+        var doneUrutan = _scenes.Where(s => _completedScenes.Contains(s.Id)).Select(s => s.Urutan).ToList();
+        _highest = doneUrutan.Count == 0 ? 0 : doneUrutan.Max();
+        _totalDone = doneUrutan.Count;
+    }
+
+    private async Task ResetProgress()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        await ProgressService.ResetAsync(_userId);
+        await LoadProgressAsync();
+    }
+}
