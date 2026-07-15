@@ -18,7 +18,12 @@
       "Bash(grep -oE \"REVISION ?=[^;]{0,20}\" /c/VRProjectNew/src/VRHaji.Web/wwwroot/libs/three/three.module.js)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5230/)",
       "Bash(node shot-run.js)",
-      "Bash(node smoke-all.js)"
+      "Bash(node smoke-all.js)",
+      "Bash(dotnet build *)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node -e \"console.log\\('playwright-core', require\\('playwright-core/package.json'\\).version\\)\")",
+      "Bash(taskkill //F //IM dotnet.exe)"
     ]
   }
 }
