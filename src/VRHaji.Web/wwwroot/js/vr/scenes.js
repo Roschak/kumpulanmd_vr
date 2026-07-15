@@ -67,13 +67,13 @@ async function tawafMechanic(engine, { namaTawaf = 'Tawaf', duas = [] }) {
 
 /** Sa'i: 7 perjalanan Shafa ↔ Marwah. */
 async function saiMechanic(engine, refs, { namaSai = "Sa'i" } = {}) {
+    let trips = 0;
     await engine.goto(refs.shafaX + 6, 0, { radius: 3.5, label: 'Menuju Bukit Shafa — titik awal Sa\'i' });
     await engine.narrate(
         'Innash shafaa wal marwata min sya\'aairillah. Sesungguhnya Shafa dan Marwah adalah sebagian dari syiar Allah. Kita mulai dari Shafa.',
         { sub: '📖 "Innash-shafaa wal-marwata min sya\'aairillah" (QS 2:158)' });
 
     engine.setObjective(`${namaSai}: berjalan Shafa → Marwah → Shafa … total 7 perjalanan`);
-    let trips = 0;
     let target = 'marwah';
     engine.setCounter(`🏃 Perjalanan<br>0 / 7`);
     engine.showWaypoint(refs.marwahX - 4, 0);
@@ -81,6 +81,12 @@ async function saiMechanic(engine, refs, { namaSai = "Sa'i" } = {}) {
         engine.onUpdate((dt, t, self) => {
             const x = engine.camera.position.x;
             engine.setHint(Math.abs(x) < 15 ? '💚 Area lampu hijau — laki-laki disunnahkan berlari-lari kecil' : '');
+            if (trips >= 7) {
+                engine.hideWaypoint();
+                self.done = true;
+                resolve();
+            }
+
             if (target === 'marwah' && x > refs.marwahX - 6) {
                 trips++;
                 target = 'shafa';
@@ -102,13 +108,9 @@ async function saiMechanic(engine, refs, { namaSai = "Sa'i" } = {}) {
                         { sub: `⛰ Shafa — perjalanan ke-${trips} selesai. Berdoa, lalu lanjut.` });
                 }
             }
-            if (trips >= 7) {
-                engine.hideWaypoint();
-                self.done = true;
-                resolve();
-            }
         });
     });
+    
     engine.setCounter('');
     engine.setHint('');
     engine.audio.sfx('success');
@@ -124,14 +126,21 @@ async function throwStones(engine, pillarGroup, { need = 7, nama = 'Jumrah Aqaba
     engine.setObjective(`Lontar ${need} batu ke ${nama} — arahkan pandangan lalu klik`);
     engine.setCounter(`🪨 Lontaran<br>0 / ${need}`);
     let hits = 0;
+    let thrown = 0;
     const stoneGeo = new THREE.SphereGeometry(0.06, 8, 6);
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb8ab96, roughness: 0.9 });
+    
+    // UI Improvement: Tampilkan beacon cahaya pada tiang jumrah agar pemain tahu ke mana harus melempar
+    const pPos = pillarGroup.getWorldPosition(new THREE.Vector3());
+    engine.showWaypoint(pPos.x, pPos.z, 0xd95757); // Warna merah/orange penanda Jumrah
+    
     await new Promise(resolve => {
         engine.addInteractable(pillarGroup, {
             label: `Lontar batu — "Bismillahi Allahu Akbar"`,
             once: false, radius: 30,
             onClick: () => {
-                if (hits >= need) return;
+                if (thrown >= need) return; // Mencegah spam klik melempar batu berlebih
+                thrown++;
                 engine.audio.sfx('throw');
                 const stone = new THREE.Mesh(stoneGeo, stoneMat);
                 const from = engine.camera.position.clone();
@@ -147,11 +156,12 @@ async function throwStones(engine, pillarGroup, { need = 7, nama = 'Jumrah Aqaba
                         engine.scene.remove(stone);
                         self.done = true;
                         hits++;
-                        engine.audio.sfx('collect');
+                        engine.audio.sfx('collect'); // Suara batu mengenai pilar
                         engine.setCounter(`🪨 Lontaran<br>${hits} / ${need}`);
                         engine.subtitle(`"Bismillahi Allahu Akbar" — lontaran ke-${hits}`);
                         if (hits >= need) {
                             engine.removeInteractable(pillarGroup);
+                            engine.hideWaypoint();
                             resolve();
                         }
                         return;
@@ -176,6 +186,9 @@ const scene01 = {
     build(engine) {
         const refs = B.airport(engine);
         refs.cabin = B.airplaneCabin(engine);
+        const usedSeats = refs.cabin.seatSpots.filter((_, idx) => idx !== 25 && Math.random() > 0.35);
+        new Crowd(engine.scene, { count: usedSeats.length, mode: 'sit', spots: usedSeats, sitY: 0.45, colors: CASUAL });
+        refs.playerSeat = refs.cabin.seatSpots[25];
         // penumpang berjalan-jalan di concourse tengah & sisi utara
         new Crowd(engine.scene, { count: 26, mode: 'wander', area: { x: -2, z: -1, w: 62, d: 12 }, colors: CASUAL });
         new Crowd(engine.scene, { count: 12, mode: 'wander', area: { x: 0, z: 22, w: 56, d: 8 }, colors: CASUAL });
@@ -221,11 +234,21 @@ const scene01 = {
         await engine.goto(36, 18, { label: 'Menuju Gate 12 untuk boarding' });
         await engine.interact(engine._sceneRefs.gate, { label: 'Boarding — masuk ke pesawat', radius: 8 });
         await engine.narrate('Silakan masuk, kita menuju kabin pesawat.', { sub: '✈ Boarding…' });
-        await engine.teleport(-13, 400, 90);
+        await engine.teleport(10.5, 400, 90);
         engine.audio.ambient('interior', 0.3);
         ctx.progress(75);
 
-        await engine.goto(8, 400, { radius: 2, label: 'Berjalan ke kursi Anda (baris tengah)' });
+        const ps = engine._sceneRefs.playerSeat;
+        await engine.goto(ps.x, ps.z, { radius: 1.5, label: 'Berjalan ke kursi Anda' });
+        
+        // Animasi POV duduk
+        await engine.fadeOut(600);
+        engine.camera.position.set(ps.x - 0.05, 1.25, ps.z); // Pov duduk bersandar (tinggi mata ~1.25m)
+        engine.camera.rotation.set(0, -Math.PI / 2, 0, 'YXZ');
+        engine._camTargetYaw = undefined; // reset smoothing
+        engine.walkRects.length = 0; // kunci pergerakan
+        await engine.fadeIn(600);
+
         await engine.narrate(
             'Duduklah dengan tenang. Saat pesawat mulai bergerak, bacalah doa safar: Subhanalladzi sakhkhara lana hadza wama kunna lahu muqrinin. Wa inna ila rabbina lamunqalibun. Mahasuci Allah yang menundukkan kendaraan ini bagi kami.',
             { sub: '🤲 Doa safar: "Subhanalladzii sakhkhara lanaa haadzaa wamaa kunnaa lahuu muqriniin…"' });
@@ -279,13 +302,14 @@ const scene02 = {
 
         // Transisi ke pelataran Masjid Nabawi
         await engine.fadeOut(1000);
-        // bersihkan area jalan lama, bangun Nabawi
+        // bersihkan area jalan lama, bangun Nabawi di lokasi terpisah
         engine.walkRects.length = 0;
         engine.blockers.length = 0;
-        const nb = B.nabawi(engine);
-        new Crowd(engine.scene, { count: 60, mode: 'idle', area: { x: 0, z: 0, w: 120, d: 60 }, colors: CASUAL });
-        new Crowd(engine.scene, { count: 20, mode: 'line', from: { x: -40, z: 30 }, to: { x: 0, z: -40 }, width: 8, colors: CASUAL });
-        engine.spawn(0, 30, 180);
+        const o = engine._sceneRefs.nabawiOrigin;
+        const nb = B.nabawi(engine, o);
+        new Crowd(engine.scene, { count: 150, mode: 'idle', area: { x: o.x, z: o.z - 10, w: 120, d: 60 }, colors: CASUAL });
+        new Crowd(engine.scene, { count: 50, mode: 'line', from: { x: o.x - 40, z: o.z - 10 }, to: { x: o.x, z: o.z - 40 }, width: 12, colors: CASUAL });
+        engine.spawn(o.x, o.z - 20, 0);
         await engine.fadeIn(1000);
         engine.audio.ambient('crowd', 0.3);
         ctx.progress(65);
@@ -315,13 +339,33 @@ const scene03 = {
         const refs = B.miqat(engine);
         new Crowd(engine.scene, { count: 18, mode: 'idle', area: { x: 8, z: -6, w: 24, d: 16 }, colors: IHRAM });
         new Crowd(engine.scene, { count: 8, mode: 'idle', area: { x: -16, z: 6, w: 14, d: 8 }, colors: CASUAL });
-        engine.spawn(16, 12, 58);
+        // Penumpang duduk di dalam bus
+        new Crowd(engine.scene, { count: 14, mode: 'sit', spots: refs.seatSpots, sitY: 1.0, colors: CASUAL });
+        
+        refs.playerSeat = refs.seatSpots[15] || refs.seatSpots[0]; 
+        engine.spawn(refs.playerSeat.x, refs.playerSeat.z, THREE.MathUtils.radToDeg(refs.playerSeat.ry) + 180, 1.6);
         return refs;
     },
     async run(engine, ctx) {
+        // Kunci pergerakan saat di dalam bus
+        engine.walkRects.length = 0; 
+
         await engine.narrate(
-            'Inilah Bir Ali, atau Dzul Hulaifah — miqat bagi jamaah dari arah Madinah. Miqat adalah batas tempat dimulainya ihram. Terdapat lima miqat makani yang ditetapkan Rasulullah. Melewati miqat tanpa berihram dikenakan dam.',
-            { sub: '📍 Bir Ali (Dzul Hulaifah) — miqat jamaah dari Madinah. Miqat makani ada 5 tempat.' });
+            'Inilah Bir Ali, atau Dzul Hulaifah — miqat bagi jamaah dari arah Madinah. Kita telah tiba di tempat miqat. Silakan turun dari bus.',
+            { sub: '📍 Bir Ali (Dzul Hulaifah) — miqat dari Madinah. Silakan turun dari bus.' });
+            
+        await engine.interact(engine._sceneRefs.busDoor, { label: 'Keluar dari bus', radius: 10 });
+        
+        await engine.fadeOut(600);
+        // Bebaskan pergerakan di luar
+        engine.addWalkRect(-28, -28, 28, 20);
+        // Teleport ke titik awal di luar bus (aman dari blocker bus)
+        engine.spawn(12, 18, 120);
+        await engine.fadeIn(600);
+
+        await engine.narrate(
+            'Miqat adalah batas tempat dimulainya ihram. Terdapat lima miqat makani yang ditetapkan Rasulullah. Melewati miqat tanpa berihram dikenakan dam.',
+            { sub: 'Miqat makani ada 5 tempat. Melewati miqat tanpa berihram dikenakan dam.' });
         ctx.progress(10);
 
         await engine.goto(-18, -4, { label: 'Menuju tempat mandi & wudhu' });
@@ -378,7 +422,7 @@ const scene04 = {
         const refs = B.masjidilHaram(engine);
         new Crowd(engine.scene, { count: 160, mode: 'orbit', center: { x: 0, z: 0 }, rMin: 11, rMax: 24, angularSpeed: 0.09, colors: IHRAM, scene: engine.scene });
         new Crowd(engine.scene, { count: 50, mode: 'idle', area: { x: 0, z: 52, w: 90, d: 24 }, colors: IHRAM });
-        engine.spawn(0, 64, 180);
+        engine.spawn(0, 64, 0);
         return refs;
     },
     async run(engine, ctx) {
@@ -460,7 +504,11 @@ const scene06 = {
     env: 'night', ambient: 'crowd',
     build(engine) {
         const refs = B.masaa(engine);
-        new Crowd(engine.scene, { count: 70, mode: 'line', from: { x: refs.shafaX + 8, z: 0 }, to: { x: refs.marwahX - 8, z: 0 }, width: 9, colors: IHRAM });
+        // Jamaah arah Shafa ke Marwah (Jalur Kanan, z: 4.5)
+        new Crowd(engine.scene, { count: 45, mode: 'line', from: { x: refs.shafaX + 12, z: 4.5 }, to: { x: refs.marwahX - 12, z: 4.5 }, width: 6.5, colors: IHRAM, oneWay: true });
+        // Jamaah arah Marwah ke Shafa (Jalur Kiri, z: -4.5)
+        new Crowd(engine.scene, { count: 45, mode: 'line', from: { x: refs.marwahX - 12, z: -4.5 }, to: { x: refs.shafaX + 12, z: -4.5 }, width: 6.5, colors: IHRAM, oneWay: true });
+        
         engine.spawn(refs.shafaX + 22, 4, -90);
         return refs;
     },
@@ -500,9 +548,13 @@ const sceneArafah = {
     env: 'goldenHour', ambient: 'crowd',
     build(engine) {
         const refs = B.arafah(engine);
-        // Jamaah wukuf — berdiri berdoa & duduk berdzikir di padang (ihram)
-        new Crowd(engine.scene, { count: 90, mode: 'idle', area: { x: 10, z: 10, w: 90, d: 60 }, colors: IHRAM });
-        new Crowd(engine.scene, { count: 40, mode: 'sit', area: { x: -20, z: 30, w: 40, d: 30 }, colors: IHRAM });
+        // Jamaah wukuf — berkumpul dan berjalan-jalan seperti rombongan haji
+        new Crowd(engine.scene, { count: 90, mode: 'groupWander', area: { x: 10, z: 10, w: 90, d: 60 }, colors: IHRAM });
+        new Crowd(engine.scene, { count: 42, mode: 'groupWander', area: { x: -20, z: 30, w: 40, d: 30 }, colors: IHRAM });
+        
+        // Jamaah yang beraktivitas di sekitar Jabal Rahmah (berjalan & ngumpul)
+        new Crowd(engine.scene, { count: 36, mode: 'groupWander', area: { x: -58, z: -50, w: 40, d: 20 }, colors: IHRAM });
+        new Crowd(engine.scene, { count: 30, mode: 'idle', area: { x: -58, z: -40, w: 30, d: 30 }, colors: IHRAM });
         engine.spawn(14, 26, 38);
         return refs;
     },
@@ -554,9 +606,11 @@ const scene07 = {
     env: 'night', ambient: 'night',
     build(engine) {
         const refs = B.muzdalifah(engine);
-        new Crowd(engine.scene, { count: 40, mode: 'sit', area: { x: -12, z: 16, w: 26, d: 12 }, colors: IHRAM });
-        new Crowd(engine.scene, { count: 20, mode: 'idle', area: { x: 8, z: -8, w: 30, d: 20 }, colors: IHRAM });
-        engine.spawn(0, 30, 180);
+        // Sebagian besar jamaah sedang Mabit (istirahat/duduk/tidur beralaskan tikar)
+        new Crowd(engine.scene, { count: 60, mode: 'sitFloor', area: { x: 0, z: 0, w: 60, d: 40 }, colors: IHRAM });
+        // Sebagian kecil berjalan-jalan mencari batu
+        new Crowd(engine.scene, { count: 18, mode: 'groupWander', area: { x: 10, z: -10, w: 40, d: 30 }, colors: IHRAM });
+        engine.spawn(0, 25, 0); // Spawn menghadap ke depan (kerumunan jamaah mabit)
         return refs;
     },
     async run(engine, ctx) {
@@ -571,14 +625,25 @@ const scene07 = {
         await new Promise(resolve => {
             for (const cluster of engine._sceneRefs.clusters) {
                 engine.addInteractable(cluster, {
-                    label: 'Ambil batu kerikil (sebesar biji kurma)', once: false, radius: 5,
+                    label: 'Ambil batu kerikil', once: true, radius: 4,
                     onClick: () => {
                         if (stones >= 7) return;
-                        stones++;
+                        
+                        // Logika mengambil berdasarkan jumlah batu di titik tersebut
+                        const count = cluster.userData.stoneCount || 1;
+                        stones += count;
+                        if (stones > 7) stones = 7; // Mentok di 7 untuk UI objektif ini
+                        
                         engine.audio.sfx('collect');
                         engine.setCounter(`🪨 Batu<br>${stones} / 7`);
-                        engine.subtitle(`Batu ke-${stones} — pilih yang sebesar biji kurma`);
-                        if (stones === 7) {
+                        engine.subtitle(count > 1 
+                            ? `Mendapat ${count} batu sekaligus! Total: ${stones}` 
+                            : `Mendapat 1 batu. Total: ${stones}`);
+                        
+                        // Visual feedback: batu yang sudah diambil menghilang
+                        cluster.visible = false;
+                        
+                        if (stones >= 7) {
                             for (const c of engine._sceneRefs.clusters) engine.removeInteractable(c);
                             resolve();
                         }
@@ -617,7 +682,7 @@ const scene08 = {
         const refs = B.mina(engine);
         new Crowd(engine.scene, { count: 60, mode: 'line', from: { x: 0, z: 30 }, to: { x: 0, z: -24 }, width: 14, colors: IHRAM });
         new Crowd(engine.scene, { count: 40, mode: 'idle', area: { x: 0, z: 60, w: 90, d: 40 }, colors: IHRAM });
-        engine.spawn(0, 70, 180);
+        engine.spawn(0, 45, 0); // Spawn menghadap struktur jembatan Jamarat (-Z)
         return refs;
     },
     async run(engine, ctx) {

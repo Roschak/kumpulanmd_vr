@@ -393,15 +393,25 @@ export class Crowd {
         this.uArmL = im(uArmGeo, outfitMat); this.uArmR = im(uArmGeo, outfitMat);
         this.fArmL = im(fArmGeo, outfitMat); this.fArmR = im(fArmGeo, outfitMat);
         this.handL = im(handGeo, skinMat); this.handR = im(handGeo, skinMat);
+
+        const eyeGeo = new THREE.SphereGeometry(0.016, 8, 6);
+        eyeGeo.scale(1, 1, 0.4);
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+        this.eyeL = im(eyeGeo, eyeMat); this.eyeR = im(eyeGeo, eyeMat);
+        const noseGeo = new THREE.ConeGeometry(0.022, 0.05, 6);
+        noseGeo.rotateX(Math.PI / 2);
+        this.nose = im(noseGeo, skinMat);
+
         this.parts = [
             this.torso, this.pelvis, this.neck, this.head, this.cap,
             this.thighL, this.thighR, this.shinL, this.shinR, this.footL, this.footR,
-            this.uArmL, this.uArmR, this.fArmL, this.fArmR, this.handL, this.handR
+            this.uArmL, this.uArmR, this.fArmL, this.fArmR, this.handL, this.handR,
+            this.eyeL, this.eyeR, this.nose
         ];
         // Kelompok pewarnaan
         this._outfitParts = [this.torso, this.uArmL, this.uArmR, this.fArmL, this.fArmR];
         this._pantsParts = [this.pelvis, this.thighL, this.thighR, this.shinL, this.shinR];
-        this._skinParts = [this.head, this.neck, this.handL, this.handR];
+        this._skinParts = [this.head, this.neck, this.handL, this.handR, this.nose];
 
         this.agents = [];
         const colors = opts.colors || [0xffffff];
@@ -409,35 +419,54 @@ export class Crowd {
         for (let i = 0; i < count; i++) {
             const a = {
                 phase: Math.random() * Math.PI * 2,
-                speed: 0.7 + Math.random() * 0.5,
+                speed: 0.5 + Math.random() * 0.3, // Animasi langkah diperlambat
                 s: 0.94 + Math.random() * 0.13
             };
             if (opts.mode === 'orbit') {
                 a.r = opts.rMin + Math.random() * (opts.rMax - opts.rMin);
                 a.angle = Math.random() * Math.PI * 2;
-                a.w = (opts.angularSpeed ?? 0.1) * (opts.rMin / a.r) * (0.8 + Math.random() * 0.4);
+                // Kecepatan tawaf/orbit dikurangi
+                a.w = (opts.angularSpeed ?? 0.1) * (opts.rMin / a.r) * (0.5 + Math.random() * 0.3);
             } else if (opts.mode === 'line') {
                 a.t = Math.random();
-                a.dir = Math.random() > 0.5 ? 1 : -1;
+                a.dir = opts.oneWay ? 1 : (Math.random() > 0.5 ? 1 : -1);
                 a.lane = (Math.random() - 0.5) * (opts.width ?? 6);
-                a.v = 0.02 + Math.random() * 0.02;
+                a.v = 0.01 + Math.random() * 0.01; // Kecepatan Sa'i diperlambat
             } else if (opts.mode === 'wander') {
                 a.x = opts.area.x + (Math.random() - 0.5) * opts.area.w;
                 a.z = opts.area.z + (Math.random() - 0.5) * opts.area.d;
                 a.tx = a.x; a.tz = a.z;
                 a.heading = Math.random() * Math.PI * 2;
-                a.v = 0.55 + Math.random() * 0.5;
+                // Kecepatan jalan bebas dikurangi
+                a.v = 0.35 + Math.random() * 0.3;
                 a.dwell = Math.random() * 3;
             } else if (opts.mode === 'sit' && opts.spots) {
                 const sp = opts.spots[i];
                 a.x = sp.x; a.z = sp.z;
                 a.heading = sp.ry ?? 0;
                 a.sit = true;
+            } else if (opts.mode === 'groupWander') {
+                if (i % 6 === 0) {
+                    a.isLeader = true;
+                    a.groupId = i;
+                    a.tx = opts.area.x + (Math.random() - 0.5) * opts.area.w;
+                    a.tz = opts.area.z + (Math.random() - 0.5) * opts.area.d;
+                } else {
+                    a.isLeader = false;
+                    a.groupId = i - (i % 6);
+                }
+                a.x = opts.area.x + (Math.random() - 0.5) * opts.area.w;
+                a.z = opts.area.z + (Math.random() - 0.5) * opts.area.d;
+                a.v = 0.35 + Math.random() * 0.15;
+                a.dwell = Math.random() * 3;
+                a.heading = Math.random() * Math.PI * 2;
+                a.sit = false;
             } else {
                 a.x = opts.area ? opts.area.x + (Math.random() - 0.5) * opts.area.w : (Math.random() - 0.5) * 20;
                 a.z = opts.area ? opts.area.z + (Math.random() - 0.5) * opts.area.d : (Math.random() - 0.5) * 20;
                 a.heading = Math.random() * Math.PI * 2;
-                a.sit = opts.mode === 'sit';
+                a.sit = opts.mode === 'sit' || opts.mode === 'sitFloor';
+                a.sitFloor = opts.mode === 'sitFloor';
             }
             a.wx = a.x ?? 0; a.wz = a.z ?? 0;
             this.agents.push(a);
@@ -524,20 +553,103 @@ export class Crowd {
             let x, z, heading = a.heading ?? 0, moving = false;
             if (o.mode === 'orbit') {
                 a.angle -= a.w * dt; // berlawanan arah jarum jam
-                x = o.center.x + Math.cos(a.angle) * a.r;
-                z = o.center.z + Math.sin(a.angle) * a.r;
-                heading = -a.angle - Math.PI;
+                
+                // Menghindari tabrakan (belok sedikit jika ada orang di depan)
+                a.rOffset = a.rOffset || 0;
+                let push = 0;
+                for (const c of ACTIVE_CROWDS) {
+                    for (let j = 0; j < c.agents.length; j++) {
+                        const b = c.agents[j];
+                        if (a === b || b.sit) continue;
+                        const dx = a.wx - b.wx, dz = a.wz - b.wz;
+                        const d = Math.hypot(dx, dz);
+                        if (d > 0 && d < 1.2) { // menghindar jika jarak < 1.2m
+                            const rdx = a.wx - o.center.x, rdz = a.wz - o.center.z;
+                            const rl = Math.hypot(rdx, rdz) || 1;
+                            let lat = (dx * rdx + dz * rdz) / rl;
+                            if (Math.abs(lat) < 0.01) lat = (Math.random() - 0.5) * 0.1;
+                            push += (1.2 - d) * (lat > 0 ? 1 : -1);
+                        }
+                    }
+                }
+                // Muluskan pergerakan menghindar
+                a.rOffset += (push * 2.0 - a.rOffset) * dt * 4;
+                if (a.rOffset > 3) a.rOffset = 3;
+                if (a.rOffset < -3) a.rOffset = -3;
+                
+                let rad = a.r + a.rOffset;
+                let nx = o.center.x + Math.cos(a.angle) * rad;
+                let nz = o.center.z + Math.sin(a.angle) * rad;
+                
+                // Jangan tembus blocker
+                const eng = ACTIVE_ENGINE;
+                if (eng && !eng._walkableStatic(nx, nz)) {
+                    a.rOffset *= 0.5;
+                    rad = a.r + a.rOffset;
+                    nx = o.center.x + Math.cos(a.angle) * rad;
+                    nz = o.center.z + Math.sin(a.angle) * rad;
+                }
+                // Solid check untuk orbit (Tawaf)
+                if (eng && !eng._agentWalkable(a, nx, nz)) {
+                    a.angle -= (a.v / o.rMax) * dt * o.angularSpeed * 10; // mundur (macet)
+                    x = a.x; z = a.z;
+                } else {
+                    x = nx;
+                    z = nz;
+                }
+                heading = -a.angle - Math.PI + (a.rOffset * 0.4);
                 moving = true;
             } else if (o.mode === 'line') {
                 a.t += a.v * dt * a.dir;
-                if (a.t > 1) { a.t = 1; a.dir = -1; }
-                if (a.t < 0) { a.t = 0; a.dir = 1; }
-                x = o.from.x + (o.to.x - o.from.x) * a.t;
-                z = o.from.z + (o.to.z - o.from.z) * a.t;
+                if (a.t > 1) { 
+                    if (o.oneWay) a.t -= 1; 
+                    else { a.t = 1; a.dir = -1; }
+                }
+                if (a.t < 0) { 
+                    if (o.oneWay) a.t += 1; 
+                    else { a.t = 0; a.dir = 1; }
+                }
+                
                 const px = o.to.z - o.from.z, pz = -(o.to.x - o.from.x);
                 const pl = Math.hypot(px, pz) || 1;
-                x += (px / pl) * a.lane; z += (pz / pl) * a.lane;
-                heading = Math.atan2((o.to.x - o.from.x) * a.dir, (o.to.z - o.from.z) * a.dir);
+                const orthX = px / pl, orthZ = pz / pl;
+                
+                // Menghindari tabrakan dengan geser ke samping (lane)
+                a.laneOffset = a.laneOffset || 0;
+                let push = 0;
+                for (const c of ACTIVE_CROWDS) {
+                    for (let j = 0; j < c.agents.length; j++) {
+                        const b = c.agents[j];
+                        if (a === b || b.sit) continue;
+                        const dx = a.wx - b.wx, dz = a.wz - b.wz;
+                        const d = Math.hypot(dx, dz);
+                        if (d > 0 && d < 1.2) {
+                            let lat = dx * orthX + dz * orthZ;
+                            if (Math.abs(lat) < 0.01) lat = (Math.random() - 0.5) * 0.1;
+                            push += (1.2 - d) * (lat > 0 ? 1 : -1);
+                        }
+                    }
+                }
+                a.laneOffset += (push * 2.0 - a.laneOffset) * dt * 4;
+                if (a.laneOffset > 3) a.laneOffset = 3;
+                if (a.laneOffset < -3) a.laneOffset = -3;
+                
+                const finalLane = a.lane + a.laneOffset;
+                let nx = o.from.x + (o.to.x - o.from.x) * a.t + orthX * finalLane;
+                let nz = o.from.z + (o.to.z - o.from.z) * a.t + orthZ * finalLane;
+                
+                // Jangan tembus blocker atau pemain/jamaah lain
+                const eng = ACTIVE_ENGINE;
+                if (eng && !eng._agentWalkable(a, nx, nz)) {
+                    a.laneOffset *= 0.5;
+                    const safeLane = a.lane + a.laneOffset;
+                    nx = o.from.x + (o.to.x - o.from.x) * a.t + orthX * safeLane;
+                    nz = o.from.z + (o.to.z - o.from.z) * a.t + orthZ * safeLane;
+                }
+                
+                x = nx;
+                z = nz;
+                heading = Math.atan2((o.to.x - o.from.x) * a.dir, (o.to.z - o.from.z) * a.dir) + (a.laneOffset * a.dir * 0.3);
                 moving = true;
             } else if (o.mode === 'wander') {
                 const dx = a.tx - a.x, dz = a.tz - a.z;
@@ -559,15 +671,76 @@ export class Crowd {
                     a.heading += dh * Math.min(1, dt * 4);
                     const nx = a.x + Math.sin(a.heading) * a.v * dt;
                     const nz = a.z + Math.cos(a.heading) * a.v * dt;
-                    // Solid: jangan menembus dinding/blocker — bila terhalang, pilih tujuan baru
+                    // Solid: jangan menembus dinding/blocker/pemain — bila terhalang, pilih tujuan baru
                     const eng = ACTIVE_ENGINE;
-                    if (eng && !eng._walkableStatic(nx, nz)) {
+                    if (eng && !eng._agentWalkable(a, nx, nz)) {
                         a.tx = o.area.x + (Math.random() - 0.5) * o.area.w;
                         a.tz = o.area.z + (Math.random() - 0.5) * o.area.d;
                         a.dwell = 0.3 + Math.random();
                     } else {
                         a.x = nx; a.z = nz;
                         moving = true;
+                    }
+                }
+                x = a.x; z = a.z; heading = a.heading;
+            } else if (o.mode === 'groupWander') {
+                let leader = this.agents[a.groupId];
+                if (!leader) leader = a;
+                if (a.isLeader) {
+                    const dx = a.tx - a.x, dz = a.tz - a.z;
+                    const d = Math.hypot(dx, dz);
+                    if (d < 0.35) {
+                        if (a.dwell > 0) {
+                            a.dwell -= dt;
+                        } else {
+                            a.tx = o.area.x + (Math.random() - 0.5) * o.area.w;
+                            a.tz = o.area.z + (Math.random() - 0.5) * o.area.d;
+                            a.dwell = 3 + Math.random() * 6;
+                        }
+                    } else {
+                        const target = Math.atan2(dx, dz);
+                        let dh = target - a.heading;
+                        if (dh > Math.PI) dh -= Math.PI * 2;
+                        if (dh < -Math.PI) dh += Math.PI * 2;
+                        a.heading += dh * Math.min(1, dt * 4);
+                        const nx = a.x + Math.sin(a.heading) * a.v * dt;
+                        const nz = a.z + Math.cos(a.heading) * a.v * dt;
+                        const eng = ACTIVE_ENGINE;
+                        if (eng && !eng._agentWalkable(a, nx, nz)) {
+                            a.tx = o.area.x + (Math.random() - 0.5) * o.area.w;
+                            a.tz = o.area.z + (Math.random() - 0.5) * o.area.d;
+                            a.dwell = 0.5 + Math.random();
+                        } else {
+                            a.x = nx; a.z = nz;
+                            moving = true;
+                        }
+                    }
+                } else {
+                    const offsetIndex = i - a.groupId;
+                    const offsetX = Math.cos(offsetIndex * Math.PI * 0.4) * 1.5;
+                    const offsetZ = Math.sin(offsetIndex * Math.PI * 0.4) * 1.5;
+                    const dx = (leader.x + offsetX) - a.x, dz = (leader.z + offsetZ) - a.z;
+                    const d = Math.hypot(dx, dz);
+                    if (d > 0.4) {
+                        const speed = d > 2.0 ? a.v * 1.5 : a.v;
+                        const target = Math.atan2(dx, dz);
+                        let dh = target - a.heading;
+                        if (dh > Math.PI) dh -= Math.PI * 2;
+                        if (dh < -Math.PI) dh += Math.PI * 2;
+                        a.heading += dh * Math.min(1, dt * 6);
+                        
+                        const nx = a.x + Math.sin(a.heading) * speed * dt;
+                        const nz = a.z + Math.cos(a.heading) * speed * dt;
+                        const eng = ACTIVE_ENGINE;
+                        if (eng && !eng._agentWalkable(a, nx, nz)) {
+                            a.x += dx * 0.1; // soft push
+                            a.z += dz * 0.1;
+                        } else {
+                            a.x = nx; a.z = nz;
+                        }
+                        moving = true;
+                    } else {
+                        a.heading = leader.heading;
                     }
                 }
                 x = a.x; z = a.z; heading = a.heading;
@@ -581,28 +754,42 @@ export class Crowd {
             qYaw.setFromAxisAngle(this._up, heading);
 
             if (a.sit) {
-                // Duduk: paha maju mendatar, betis turun, badan tegak.
-                const base = (o.sitY ?? 0.46);
+                // Duduk: di kursi atau lesehan di lantai
+                const isFloor = a.sitFloor;
+                const base = isFloor ? 0.05 : (o.sitY ?? 0.46);
                 const hipY = base * sc, shoY = (base + 0.48) * sc;
-                this._limb(this.thighL, this.shinL, this.footL, i, x, hipY, z, -0.1, 0.02, L.thigh, L.shin, 1.45, -1.5, true, qYaw, sc);
-                this._limb(this.thighR, this.shinR, this.footR, i, x, hipY, z, 0.1, 0.02, L.thigh, L.shin, 1.45, -1.5, true, qYaw, sc);
+                // Jika di lantai, luruskan kaki ke depan (knee = 0.0)
+                const tSw = -1.45, kB = isFloor ? 0.0 : 1.5;
+                this._limb(this.thighL, this.shinL, this.footL, i, x, hipY, z, -0.1, 0.02, L.thigh, L.shin, tSw, kB, true, qYaw, sc);
+                this._limb(this.thighR, this.shinR, this.footR, i, x, hipY, z, 0.1, 0.02, L.thigh, L.shin, tSw, kB, true, qYaw, sc);
                 this._compose(this.pelvis, i, x, (base + 0.06) * sc, z, qYaw, sc);
                 this._compose(this.torso, i, x, (base + 0.28) * sc, z, qYaw, sc);
                 this._compose(this.neck, i, x, (base + 0.55) * sc, z, qYaw, sc);
                 this._compose(this.head, i, x, (base + 0.68) * sc, z, qYaw, sc);
                 this._capAt(a, i, x, (base + 0.72) * sc, z, qYaw, sc);
-                // lengan bersandar di paha
-                this._limb(this.uArmL, this.fArmL, this.handL, i, x, shoY, z, -0.23, 0, L.uArm, L.fArm, 0.6, 0.85, false, qYaw, sc);
-                this._limb(this.uArmR, this.fArmR, this.handR, i, x, shoY, z, 0.23, 0, L.uArm, L.fArm, 0.6, 0.85, false, qYaw, sc);
+                this._facial(i, x, (base + 0.68) * sc, z, qYaw, sc);
+                
+                let uArmSw = -0.6, fArmSw = -0.85; // Default (duduk kursi)
+                if (isFloor) {
+                    uArmSw = 0.05; fArmSw = -0.1; // Tangan jatuh rileks di paha/samping
+                }
+                this._limb(this.uArmL, this.fArmL, this.handL, i, x, shoY, z, -0.23, 0, L.uArm, L.fArm, uArmSw, fArmSw, false, qYaw, sc);
+                this._limb(this.uArmR, this.fArmR, this.handR, i, x, shoY, z, 0.23, 0, L.uArm, L.fArm, uArmSw, fArmSw, false, qYaw, sc);
             } else {
-                const bob = moving ? Math.abs(Math.sin(wp)) * 0.05 : Math.sin(time * 1.4 + a.phase) * 0.006;
+                a.walkBlend = a.walkBlend || 0;
+                if (moving) {
+                    a.walkBlend = Math.min(1, a.walkBlend + dt * 5);
+                } else {
+                    a.walkBlend = Math.max(0, a.walkBlend - dt * 5);
+                }
+                const bob = a.walkBlend * (Math.abs(Math.sin(wp)) * 0.05) + (1 - a.walkBlend) * (Math.sin(time * 1.4 + a.phase) * 0.006);
                 const base = 0.94 + bob;
                 const hipY = base * sc, shoY = (base + 0.48) * sc;
                 // Kaki: ayun pinggul berlawanan + tekuk lutut saat melangkah maju
-                const swL = moving ? Math.sin(wp) * 0.42 : 0;
-                const swR = moving ? Math.sin(wp + Math.PI) * 0.42 : 0;
-                const kneeL = moving ? Math.max(0, Math.sin(wp + 1.1)) * 0.85 : 0.05;
-                const kneeR = moving ? Math.max(0, Math.sin(wp + Math.PI + 1.1)) * 0.85 : 0.05;
+                const swL = Math.sin(wp) * 0.42 * a.walkBlend;
+                const swR = Math.sin(wp + Math.PI) * 0.42 * a.walkBlend;
+                const kneeL = Math.max(0, -Math.cos(wp)) * 0.85 * a.walkBlend + 0.05;
+                const kneeR = Math.max(0, -Math.cos(wp + Math.PI)) * 0.85 * a.walkBlend + 0.05;
                 this._limb(this.thighL, this.shinL, this.footL, i, x, hipY, z, -0.1, 0, L.thigh, L.shin, swL, kneeL, true, qYaw, sc);
                 this._limb(this.thighR, this.shinR, this.footR, i, x, hipY, z, 0.1, 0, L.thigh, L.shin, swR, kneeR, true, qYaw, sc);
                 this._compose(this.pelvis, i, x, (base + 0.02) * sc, z, qYaw, sc);
@@ -610,10 +797,14 @@ export class Crowd {
                 this._compose(this.neck, i, x, (base + 0.55) * sc, z, qYaw, sc);
                 this._compose(this.head, i, x, (base + 0.69) * sc, z, qYaw, sc);
                 this._capAt(a, i, x, (base + 0.73) * sc, z, qYaw, sc);
+                this._facial(i, x, (base + 0.69) * sc, z, qYaw, sc);
                 // Lengan: ayun berlawanan kaki + siku sedikit menekuk
-                const aSw = moving ? -Math.sin(wp) * 0.38 : Math.sin(time * 1.4 + a.phase) * 0.03;
-                this._limb(this.uArmL, this.fArmL, this.handL, i, x, shoY, z, -0.23, 0, L.uArm, L.fArm, aSw, 0.28, false, qYaw, sc);
-                this._limb(this.uArmR, this.fArmR, this.handR, i, x, shoY, z, 0.23, 0, L.uArm, L.fArm, -aSw, 0.28, false, qYaw, sc);
+                const armIdle = Math.sin(time * 1.4 + a.phase) * 0.03;
+                const aSw = -Math.sin(wp) * 0.38 * a.walkBlend + armIdle * (1 - a.walkBlend);
+                
+                let uSwL = aSw, uSwR = -aSw, fSw = -0.28;
+                this._limb(this.uArmL, this.fArmL, this.handL, i, x, shoY, z, -0.23, 0, L.uArm, L.fArm, uSwL, fSw, false, qYaw, sc);
+                this._limb(this.uArmR, this.fArmR, this.handR, i, x, shoY, z, 0.23, 0, L.uArm, L.fArm, uSwR, fSw, false, qYaw, sc);
             }
         }
         for (const p of this.parts) p.instanceMatrix.needsUpdate = true;
@@ -623,6 +814,18 @@ export class Crowd {
     _capAt(a, i, x, y, z, qYaw, sc) {
         if (a.cap) this._compose(this.cap, i, x, y, z, qYaw, sc);
         else this._compose(this.cap, i, x, y, z, qYaw, 0);
+    }
+
+    _facial(i, hx, hy, hz, qYaw, sc) {
+        // mata kiri
+        this._v1.set(-0.04 * sc, 0.02 * sc, 0.105 * sc).applyQuaternion(qYaw);
+        this._compose(this.eyeL, i, hx + this._v1.x, hy + this._v1.y, hz + this._v1.z, qYaw, sc);
+        // mata kanan
+        this._v1.set(0.04 * sc, 0.02 * sc, 0.105 * sc).applyQuaternion(qYaw);
+        this._compose(this.eyeR, i, hx + this._v1.x, hy + this._v1.y, hz + this._v1.z, qYaw, sc);
+        // hidung
+        this._v1.set(0, -0.015 * sc, 0.115 * sc).applyQuaternion(qYaw);
+        this._compose(this.nose, i, hx + this._v1.x, hy + this._v1.y, hz + this._v1.z, qYaw, sc);
     }
 }
 
@@ -755,11 +958,15 @@ export class Engine {
             if (this._dragMoved > 5 && document.pointerLockElement !== this.renderer.domElement) {
                 try { this.renderer.domElement.requestPointerLock(); } catch { }
             }
-            const eul = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
-            eul.y -= mx * 0.0028;
-            eul.x = Math.max(-1.45, Math.min(1.45, eul.x - my * 0.0028));
-            eul.z = 0;
-            this.camera.quaternion.setFromEuler(eul);
+            if (this._camTargetYaw === undefined) {
+                const initEul = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+                this._camTargetYaw = initEul.y;
+                this._camTargetPitch = initEul.x;
+                this._camCurrentYaw = initEul.y;
+                this._camCurrentPitch = initEul.x;
+            }
+            this._camTargetYaw -= mx * 0.0028;
+            this._camTargetPitch = Math.max(-1.45, Math.min(1.45, this._camTargetPitch - my * 0.0028));
         };
         this._onMouseUp = e => {
             if (e.button !== 0 || !this._dragging) return;
@@ -786,10 +993,10 @@ export class Engine {
     /** preset waktu: 'day' | 'goldenHour' | 'night' | 'dawn' */
     setEnvironment(preset, { fog = true } = {}) {
         const cfg = {
-            day: { elev: 55, azim: 140, turb: 6, rayl: 1.2, expo: 0.55, sun: 1.9, sunColor: 0xfff3df, hemi: 0.35, fogC: 0xcfd9e4, envI: 0.38, bloom: 0.1 },
-            goldenHour: { elev: 8, azim: 250, turb: 7, rayl: 2.6, expo: 0.55, sun: 1.7, sunColor: 0xffc37a, hemi: 0.28, fogC: 0xe8c9a0, envI: 0.35, bloom: 0.18 },
-            dawn: { elev: 3, azim: 95, turb: 8, rayl: 3.2, expo: 0.6, sun: 1.1, sunColor: 0xa8bfe8, hemi: 0.24, fogC: 0x9fb2cd, envI: 0.32, bloom: 0.25 },
-            night: { elev: -12, azim: 0, turb: 4, rayl: 1, expo: 0.75, sun: 0.35, sunColor: 0xa9c3ff, hemi: 0.12, fogC: 0x0a1120, envI: 0.22, bloom: 0.35 }
+            day: { elev: 55, azim: 140, turb: 6, rayl: 1.2, expo: 0.35, sun: 0.9, sunColor: 0xfff3df, hemi: 0.18, fogC: 0xcfd9e4, envI: 0.18, bloom: 0.05 },
+            goldenHour: { elev: 8, azim: 250, turb: 7, rayl: 2.6, expo: 0.35, sun: 0.8, sunColor: 0xffc37a, hemi: 0.15, fogC: 0xe8c9a0, envI: 0.18, bloom: 0.1 },
+            dawn: { elev: 3, azim: 95, turb: 8, rayl: 3.2, expo: 0.4, sun: 0.6, sunColor: 0xa8bfe8, hemi: 0.12, fogC: 0x9fb2cd, envI: 0.15, bloom: 0.15 },
+            night: { elev: -12, azim: 0, turb: 4, rayl: 1, expo: 0.55, sun: 0.15, sunColor: 0xa9c3ff, hemi: 0.05, fogC: 0x0a1120, envI: 0.1, bloom: 0.25 }
         }[preset] || {};
         this.envPreset = preset;
         this.renderer.toneMappingExposure = cfg.expo;
@@ -889,6 +1096,7 @@ export class Engine {
     spawn(x, z, yawDeg = 0, y = 1.7) {
         this.camera.position.set(x, y, z);
         this.camera.rotation.set(0, THREE.MathUtils.degToRad(yawDeg), 0, 'YXZ');
+        this._camTargetYaw = undefined;
     }
 
     addWalkRect(x1, z1, x2, z2) {
@@ -923,7 +1131,6 @@ export class Engine {
             const agents = c.agents;
             for (let i = 0; i < agents.length; i++) {
                 const a = agents[i];
-                if (a.sit) continue; // yang duduk sudah berada di zona blocker bangku
                 const dx = x - a.wx, dz = z - a.wz;
                 if (dx * dx + dz * dz < rr2) return true;
             }
@@ -933,6 +1140,29 @@ export class Engine {
     /** Bisa ditempati pemain: geometri statis DAN tidak menembus jamaah. */
     _walkable(x, z) {
         return this._walkableStatic(x, z) && !this._crowdBlocks(x, z);
+    }
+    
+    /** Bisa ditempati jamaah: geometri statis, hindari pemain, hindari jamaah lain (SOLID). */
+    _agentWalkable(agent, x, z) {
+        if (!this._walkableStatic(x, z)) return false;
+        
+        // Hindari pemain
+        const dx = x - this.camera.position.x;
+        const dz = z - this.camera.position.z;
+        const rr = this.playerRadius + 0.35; 
+        if (dx * dx + dz * dz < rr * rr) return false;
+        
+        // Hindari jamaah lain (opsional untuk performa, tapi diminta user agar solid 100%)
+        for (const c of ACTIVE_CROWDS) {
+            const agents = c.agents;
+            for (let i = 0; i < agents.length; i++) {
+                const b = agents[i];
+                if (agent === b) continue;
+                const bdx = x - b.wx, bdz = z - b.wz;
+                if (bdx * bdx + bdz * bdz < 0.25) return false; // 0.5 meter jarak aman minimal
+            }
+        }
+        return true;
     }
 
     _movePlayer(dt) {
@@ -1380,6 +1610,12 @@ export class Engine {
         const t = this.clock.elapsedTime;
         const inVR = this.renderer.xr.isPresenting;
         if (!this.paused) {
+            if (!inVR && this._camTargetYaw !== undefined) {
+                this._camCurrentYaw += (this._camTargetYaw - this._camCurrentYaw) * Math.min(1, dt * 15);
+                this._camCurrentPitch += (this._camTargetPitch - this._camCurrentPitch) * Math.min(1, dt * 15);
+                const eul = new THREE.Euler(this._camCurrentPitch, this._camCurrentYaw, 0, 'YXZ');
+                this.camera.quaternion.setFromEuler(eul);
+            }
             if (inVR) this._moveVR(dt); else this._movePlayer(dt);
             for (const c of ACTIVE_CROWDS) c.update(dt, t);
             for (let i = this.updaters.length - 1; i >= 0; i--) {

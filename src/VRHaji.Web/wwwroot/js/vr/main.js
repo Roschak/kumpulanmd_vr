@@ -11,17 +11,22 @@ let started = false;
 
 /** Muat scene (tanpa memulai alur) agar 3D siap saat intro tampil. */
 export function preload(containerId, sceneNo, dotnetRef) {
-    const container = document.getElementById(containerId);
-    if (!container) throw new Error('Container tidak ditemukan: ' + containerId);
-    dispose();
-    engine = new Engine(container);
-    engine.dotnet = dotnetRef;
-    sceneDef = SCENES[sceneNo];
-    if (!sceneDef) throw new Error('Scene tidak dikenal: ' + sceneNo);
-    engine.setEnvironment(sceneDef.env);
-    engine._sceneRefs = sceneDef.build(engine);
-    engine.setProgress(0);
-    started = false;
+    try {
+        const container = document.getElementById(containerId);
+        if (!container) throw new Error('Container tidak ditemukan: ' + containerId);
+        dispose();
+        engine = new Engine(container);
+        engine.dotnet = dotnetRef;
+        sceneDef = SCENES[sceneNo];
+        if (!sceneDef) throw new Error('Scene tidak dikenal: ' + sceneNo);
+        engine.setEnvironment(sceneDef.env);
+        engine._sceneRefs = sceneDef.build(engine);
+        engine.setProgress(0);
+        started = false;
+    } catch (e) {
+        console.error("JS Error in preload:", e);
+        throw e;
+    }
 }
 
 /** Mulai alur scene (dipanggil dari tombol "Mulai Simulasi"). */

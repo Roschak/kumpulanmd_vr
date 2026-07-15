@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VRHaji.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a94c792fda45465ecaf3acd9056f0d6d896fb58e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+75a8d878ed166ba4af6c756bedfdeb369ebab342")]
 [assembly: System.Reflection.AssemblyProductAttribute("VRHaji.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VRHaji.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
