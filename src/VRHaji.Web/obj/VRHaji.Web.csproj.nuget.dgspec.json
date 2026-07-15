@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\VRProjectNew\\src\\VRHaji.Web\\VRHaji.Web.csproj": {}
+    "C:\\kumpulanmd_vr\\src\\VRHaji.Web\\VRHaji.Web.csproj": {}
   },
   "projects": {
-    "C:\\VRProjectNew\\src\\VRHaji.Web\\VRHaji.Web.csproj": {
+    "C:\\kumpulanmd_vr\\src\\VRHaji.Web\\VRHaji.Web.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\VRProjectNew\\src\\VRHaji.Web\\VRHaji.Web.csproj",
+        "projectUniqueName": "C:\\kumpulanmd_vr\\src\\VRHaji.Web\\VRHaji.Web.csproj",
         "projectName": "VRHaji.Web",
-        "projectPath": "C:\\VRProjectNew\\src\\VRHaji.Web\\VRHaji.Web.csproj",
-        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\VRProjectNew\\src\\VRHaji.Web\\obj\\",
+        "projectPath": "C:\\kumpulanmd_vr\\src\\VRHaji.Web\\VRHaji.Web.csproj",
+        "packagesPath": "C:\\Users\\vioad\\.nuget\\packages\\",
+        "outputPath": "C:\\kumpulanmd_vr\\src\\VRHaji.Web\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\vioad\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -75,7 +75,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.316/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
