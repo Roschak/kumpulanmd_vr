@@ -198,6 +198,8 @@ const scene01 = {
         new Crowd(engine.scene, { count: 26, mode: 'sit', spots: refs.seatSpots, sitY: 0.5, colors: CASUAL });
         // antrian di depan check-in
         new Crowd(engine.scene, { count: 6, mode: 'idle', area: { x: -26, z: -20.2, w: 8, d: 1 }, colors: CASUAL });
+        // petugas berjaga di tiap booth: check-in, imigrasi, kafe, gate
+        new Crowd(engine.scene, { count: refs.staffSpots.length, mode: 'post', spots: refs.staffSpots, capChance: 0.75 });
         engine.spawn(0, 20, 0);
         return refs;
     },
@@ -274,6 +276,8 @@ const scene02 = {
         // Masjid Nabawi dibangun di "dunia" terpisah — dibangun saat transisi
         new Crowd(engine.scene, { count: 20, mode: 'wander', area: { x: 4, z: -1, w: 50, d: 12 }, colors: CASUAL });
         new Crowd(engine.scene, { count: 14, mode: 'sit', spots: refs.seatSpots, sitY: 0.5, colors: CASUAL });
+        // petugas berjaga di tiap booth: check-in, imigrasi, kafe, gate
+        new Crowd(engine.scene, { count: refs.staffSpots.length, mode: 'post', spots: refs.staffSpots, capChance: 0.75 });
         engine.spawn(-30, 10, -120);
         return refs;
     },
@@ -307,18 +311,21 @@ const scene02 = {
         engine.blockers.length = 0;
         const o = engine._sceneRefs.nabawiOrigin;
         const nb = B.nabawi(engine, o);
-        new Crowd(engine.scene, { count: 150, mode: 'idle', area: { x: o.x, z: o.z - 10, w: 120, d: 60 }, colors: CASUAL });
-        new Crowd(engine.scene, { count: 50, mode: 'line', from: { x: o.x - 40, z: o.z - 10 }, to: { x: o.x, z: o.z - 40 }, width: 12, colors: CASUAL });
-        engine.spawn(o.x, o.z - 20, 0);
+        // Jamaah memenuhi pelataran di bawah payung dan mengalir ke arah gerbang
+        new Crowd(engine.scene, { count: 150, mode: 'idle', area: { x: o.x, z: o.z - 6, w: 150, d: 64 }, colors: CASUAL });
+        new Crowd(engine.scene, { count: 60, mode: 'line', from: { x: o.x - 44, z: o.z + 6 }, to: { x: o.x, z: o.z - 36 }, width: 12, colors: CASUAL });
+        new Crowd(engine.scene, { count: 40, mode: 'wander', area: { x: o.x, z: o.z + 22, w: 130, d: 22 }, colors: CASUAL });
+        engine.spawn(o.x, o.z - 18, 0);
         await engine.fadeIn(1000);
         engine.audio.ambient('crowd', 0.3);
         ctx.progress(65);
 
         await engine.narrate(
-            'Subhanallah. Di hadapan Anda berdiri Masjid Nabawi dengan payung-payung raksasa dan Kubah Hijau yang menaungi makam Rasulullah. Sholat di masjid ini bernilai seribu kali lipat.',
-            { sub: '💚 Masjid Nabawi — payung ikonik & Kubah Hijau. Sholat di sini bernilai 1000×.' });
+            'Subhanallah. Di hadapan Anda berdiri Masjid Nabawi. Payung-payung raksasa itu terbuka menaungi pelataran — perhatikan motif arabesque hijau tosca dan emas di bawahnya. Di kejauhan, Kubah Hijau menaungi makam Rasulullah shallallahu alaihi wasallam. Sholat di masjid ini bernilai seribu kali lipat.',
+            { sub: '💚 Payung raksasa bermotif arabesque & Kubah Hijau. Sholat di sini bernilai 1000×.' });
 
-        await engine.goto(nb.gatePos.x, nb.gatePos.z, { radius: 3.5, label: 'Berjalan menuju gerbang Masjid Nabawi' });
+        engine.setHint('Arahkan pandangan ke atas untuk melihat motif payung · WASD berjalan');
+        await engine.goto(nb.gatePos.x, nb.gatePos.z, { radius: 3.5, label: 'Berjalan di bawah payung menuju gerbang Masjid Nabawi' });
         await engine.narrate(
             'Sebelum masuk: dahulukan kaki kanan dan baca doa, Allahummaftah lii abwaaba rahmatik — Ya Allah bukakanlah untukku pintu-pintu rahmat-Mu. Di dalam, jaga ketenangan, dan bila memungkinkan sholatlah di Raudhah, taman surga.',
             { sub: '🚪 Masuk kaki kanan + doa: "Allahummaftah lii abwaaba rahmatik". Raudhah = taman surga.' });

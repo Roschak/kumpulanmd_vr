@@ -140,6 +140,139 @@ export const Tex = {
         t.wrapS = t.wrapT = THREE.RepeatWrapping;
         t.colorSpace = THREE.SRGBColorSpace;
         return t;
+    },
+
+    /**
+     * Motif bawah payung Masjid Nabawi — bidang persegi yang dipetakan planar
+     * dari atas, sehingga pola sejajar sisi payung persis seperti aslinya:
+     * rosette bintang bertumpuk di pusat (tepat di bawah tiang), arabesque
+     * menjalar ke empat sudut, pita bertingkat di tepi. Palet tosca–emas–ivory.
+     */
+    canopyMotif() {
+        const S = 1024, c = this._canvas(S, S), g = c.getContext('2d');
+        const IVORY = '#f4efe3', TEAL = '#1c6f68', TEAL_L = '#2f9a8c',
+            GOLD = '#c1a02f', GOLD_L = '#e8cd7a', SAND = '#e0d4b8';
+        const cx = S / 2, cy = S / 2;
+        g.fillStyle = IVORY; g.fillRect(0, 0, S, S);
+
+        // Bintang n-titik berpusat di (px,py)
+        const star = (n, rO, rI, rot, px = cx, py = cy) => {
+            g.beginPath();
+            for (let i = 0; i < n * 2; i++) {
+                const r = i % 2 ? rI : rO, a = rot + i * Math.PI / n;
+                const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r;
+                i ? g.lineTo(x, y) : g.moveTo(x, y);
+            }
+            g.closePath();
+        };
+        const fillStroke = (fill, stroke, lw) => {
+            if (fill) { g.fillStyle = fill; g.fill(); }
+            if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+        };
+        const ring = (r, col, lw) => {
+            g.beginPath(); g.arc(cx, cy, r, 0, 7);
+            g.strokeStyle = col; g.lineWidth = lw; g.stroke();
+        };
+
+        // Jahitan kain radial dari hub ke tepi — membuat permukaan terbaca sebagai membran
+        g.strokeStyle = SAND; g.lineWidth = 2; g.globalAlpha = 0.75;
+        for (let i = 0; i < 32; i++) {
+            const a = i * Math.PI / 16;
+            g.beginPath(); g.moveTo(cx, cy);
+            g.lineTo(cx + Math.cos(a) * S, cy + Math.sin(a) * S);
+            g.stroke();
+        }
+        g.globalAlpha = 1;
+
+        // Pita tepi bertingkat
+        const band = (inset, col, lw) => {
+            g.strokeStyle = col; g.lineWidth = lw;
+            g.strokeRect(inset, inset, S - inset * 2, S - inset * 2);
+        };
+        band(13, TEAL, 26);
+        band(38, GOLD, 6);
+        band(50, TEAL_L, 2.5);
+
+        // Jalinan belah ketupat di dalam pita tepi
+        g.strokeStyle = GOLD_L; g.lineWidth = 2;
+        for (let i = 0; i < 40; i++) {
+            const t = 13 + (i + 0.5) * (S - 26) / 40, d = 9;
+            for (const [ax, ay] of [[t, 13], [t, S - 13], [13, t], [S - 13, t]]) {
+                const vert = ax === 13 || ax === S - 13;
+                g.beginPath();
+                if (vert) {
+                    g.moveTo(ax - d, ay); g.lineTo(ax, ay - d);
+                    g.lineTo(ax + d, ay); g.lineTo(ax, ay + d);
+                } else {
+                    g.moveTo(ax, ay - d); g.lineTo(ax + d, ay);
+                    g.lineTo(ax, ay + d); g.lineTo(ax - d, ay);
+                }
+                g.closePath(); g.stroke();
+            }
+        }
+
+        // Kipas arabesque di empat sudut
+        for (const [sx, sy, rot] of [[0, 0, 0], [S, 0, Math.PI / 2], [S, S, Math.PI], [0, S, -Math.PI / 2]]) {
+            g.save(); g.translate(sx, sy); g.rotate(rot);
+            g.strokeStyle = TEAL_L; g.lineWidth = 3.5;
+            for (let i = 1; i <= 5; i++) {
+                g.beginPath(); g.arc(0, 0, 60 + i * 26, 0, Math.PI / 2); g.stroke();
+            }
+            g.strokeStyle = GOLD; g.lineWidth = 2.5;
+            for (let i = 0; i <= 6; i++) {
+                const a = i * (Math.PI / 2) / 6;
+                g.beginPath();
+                g.moveTo(Math.cos(a) * 74, Math.sin(a) * 74);
+                g.lineTo(Math.cos(a) * 192, Math.sin(a) * 192);
+                g.stroke();
+            }
+            star(8, 52, 22, 0, 0, 0);
+            fillStroke(TEAL, GOLD_L, 3);
+            g.restore();
+        }
+
+        // Cincin medali di antara rosette dan pita tepi — mengisi bidang kain
+        // agar motif tetap terbaca saat payung dilihat dari bawah.
+        for (let i = 0; i < 12; i++) {
+            const a = i * Math.PI / 6, R = 428;
+            const mx = cx + Math.cos(a) * R, my = cy + Math.sin(a) * R;
+            star(8, 34, 15, a, mx, my);
+            fillStroke(i % 2 ? GOLD : TEAL, i % 2 ? TEAL : GOLD_L, 2.5);
+            g.strokeStyle = TEAL_L; g.lineWidth = 2;
+            g.beginPath(); g.arc(mx, my, 46, 0, 7); g.stroke();
+        }
+        ring(386, GOLD, 2.5);
+        ring(378, TEAL_L, 2);
+
+        // Rosette pusat — tepat di bawah hub tiang
+        ring(330, TEAL_L, 3);
+        ring(318, GOLD, 5);
+        star(16, 300, 176, 0);
+        fillStroke(TEAL, GOLD_L, 4);
+        star(16, 250, 132, Math.PI / 16);
+        fillStroke(IVORY, GOLD, 3);
+        // Kelopak arabesque mengelilingi medali
+        g.strokeStyle = TEAL_L; g.lineWidth = 4;
+        for (let i = 0; i < 8; i++) {
+            const a = i * Math.PI / 4;
+            g.save(); g.translate(cx, cy); g.rotate(a);
+            g.beginPath();
+            g.moveTo(0, -60);
+            g.quadraticCurveTo(52, -108, 0, -168);
+            g.quadraticCurveTo(-52, -108, 0, -60);
+            g.stroke();
+            g.restore();
+        }
+        star(8, 96, 44, Math.PI / 8);
+        fillStroke(GOLD, TEAL, 3);
+        ring(30, TEAL, 8);
+        g.beginPath(); g.arc(cx, cy, 25, 0, 7);
+        g.fillStyle = GOLD_L; g.fill();
+
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 8;
+        return t;
     }
 };
 
@@ -339,13 +472,17 @@ let ACTIVE_ENGINE = null;
 
 export class Crowd {
     /**
-     * @param {object} opts { count, mode:'orbit'|'line'|'idle'|'sit'|'wander',
+     * @param {object} opts { count, mode:'orbit'|'line'|'idle'|'sit'|'wander'|'post',
      *                        center, rMin, rMax, from, to, area:{x,z,w,d},
-     *                        spots:[{x,z,ry}], sitY, colors:[hex...] }
+     *                        spots:[{x,z,ry}], sitY, colors:[hex...], capChance }
+     *
+     * Mode 'post' — petugas yang bertugas di satu titik tetap (counter check-in,
+     * booth imigrasi, kios kafe): diam menghadap ry, boleh duduk/berdiri per titik
+     * (spot.sit, spot.sitY) dan berseragam sendiri-sendiri (spot.color).
      */
     constructor(scene, opts) {
         this.opts = opts;
-        if (opts.mode === 'sit' && opts.spots) {
+        if ((opts.mode === 'sit' || opts.mode === 'post') && opts.spots) {
             opts.count = Math.min(opts.count, opts.spots.length);
         }
         const count = opts.count;
@@ -445,6 +582,13 @@ export class Crowd {
                 a.x = sp.x; a.z = sp.z;
                 a.heading = sp.ry ?? 0;
                 a.sit = true;
+            } else if (opts.mode === 'post' && opts.spots) {
+                const sp = opts.spots[i];
+                a.x = sp.x; a.z = sp.z;
+                a.heading = sp.ry ?? 0;
+                a.sit = !!sp.sit;
+                if (sp.sitY !== undefined) a.sitY = sp.sitY;
+                if (sp.color !== undefined) a.outfit = sp.color;
             } else if (opts.mode === 'groupWander') {
                 if (i % 6 === 0) {
                     a.isLeader = true;
@@ -471,7 +615,7 @@ export class Crowd {
             a.wx = a.x ?? 0; a.wz = a.z ?? 0;
             this.agents.push(a);
 
-            cOutfit.setHex(colors[Math.floor(Math.random() * colors.length)]);
+            cOutfit.setHex(a.outfit ?? colors[Math.floor(Math.random() * colors.length)]);
             // pakaian terang (ihram) = jubah sewarna; pakaian gelap = celana lebih gelap
             const lum = cOutfit.r * 0.3 + cOutfit.g * 0.6 + cOutfit.b * 0.1;
             const ihramLike = lum > 0.72;
@@ -479,7 +623,7 @@ export class Crowd {
             else cPants.copy(cOutfit).multiplyScalar(0.32 + Math.random() * 0.22);
             cSkin.setHex(SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)]);
             // Tutup kepala: jamaah ihram tak bertutup; selainnya ± kopiah/peci warna acak
-            a.cap = !ihramLike && Math.random() < 0.55;
+            a.cap = !ihramLike && Math.random() < (opts.capChance ?? 0.55);
             cCap.setHex(CAP_COLORS[Math.floor(Math.random() * CAP_COLORS.length)]);
             for (const p of this._outfitParts) p.setColorAt(i, cOutfit);
             for (const p of this._pantsParts) p.setColorAt(i, cPants);
@@ -756,7 +900,7 @@ export class Crowd {
             if (a.sit) {
                 // Duduk: di kursi atau lesehan di lantai
                 const isFloor = a.sitFloor;
-                const base = isFloor ? 0.05 : (o.sitY ?? 0.46);
+                const base = isFloor ? 0.05 : (a.sitY ?? o.sitY ?? 0.46);
                 const hipY = base * sc, shoY = (base + 0.48) * sc;
                 // Jika di lantai, luruskan kaki ke depan (knee = 0.0)
                 const tSw = -1.45, kB = isFloor ? 0.0 : 1.5;
@@ -834,12 +978,35 @@ export class Crowd {
  * ============================================================ */
 const _NDC_CENTER = new THREE.Vector2(0, 0);
 
+// Kontrol pandangan
+const LOOK_SENS = 0.0028;      // radian per piksel geseran
+const MAX_LOOK_DELTA = 120;    // piksel; batas lonjakan per event
+const LOOK_DAMP = 18;          // makin besar makin cepat menyusul target
+const MOVE_DAMP = 12;          // pelunakan akselerasi/pengereman jalan
+
+// Pekerjaan non-render yang tak perlu ikut laju frame.
+const MINIMAP_HZ = 12;
+const HOVER_HZ = 20;
+// Resolusi adaptif: turunkan pixel ratio bila frame konsisten meleset dari 60fps.
+const FRAME_BUDGET_MS = 18;    // ~55fps; di atas ini dianggap gagal 60fps
+const FRAME_GOOD_MS = 11;      // ~90fps; ada ruang untuk naik lagi
+const PR_MIN = 1.0;
+
+// Scratch — dipakai ulang tiap frame agar tak menyampah GC.
+const _eul = new THREE.Euler(0, 0, 0, 'YXZ');
+const _eulB = new THREE.Euler(0, 0, 0, 'YXZ');
+const _vec = new THREE.Vector3();
+const _prevPos = new THREE.Vector3();
+
 export class Engine {
     constructor(container) {
         this.container = container;
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-        // Supersampling ringan: minimal 1.5× agar tetap tajam di monitor ber-DPR 1
-        this.renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio, 1.5), 2));
+        // Supersampling ringan: minimal 1.5× agar tetap tajam di monitor ber-DPR 1.
+        // Ini plafon; _adaptResolution boleh turun sampai PR_MIN demi 60fps.
+        this._prMax = Math.min(Math.max(window.devicePixelRatio, 1.5), 2);
+        this._pr = this._prMax;
+        this.renderer.setPixelRatio(this._pr);
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -873,7 +1040,7 @@ export class Engine {
         }
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         this.bloom = new UnrealBloomPass(
-            new THREE.Vector2(container.clientWidth, container.clientHeight), 0.32, 0.5, 0.88);
+            new THREE.Vector2(container.clientWidth, container.clientHeight), 0.2, 0.5, 0.92);
         this.composer.addPass(this.bloom);
         this.composer.addPass(new OutputPass());
 
@@ -903,6 +1070,11 @@ export class Engine {
         this._pointerNDC = new THREE.Vector2(0, 0);
         this._dragging = false;
         this._dragMoved = 0;
+        this._nextMinimap = 0;
+        this._nextHover = 0;
+        this._minimapBase = null;  // lapisan statis minimap, digambar sekali
+        this._frameAvg = 16.7;
+        this._prCooldown = 0;
 
         this.hud = {
             subtitle: document.getElementById('vr-subtitle'),
@@ -934,6 +1106,7 @@ export class Engine {
             if (this.uiOpen || e.button !== 0) return;
             this._dragging = true;
             this._dragMoved = 0;
+            this._wasLocked = false;
             this._lastCX = e.clientX;
             this._lastCY = e.clientY;
         };
@@ -943,9 +1116,10 @@ export class Engine {
                 ((e.clientX - r.left) / r.width) * 2 - 1,
                 -((e.clientY - r.top) / r.height) * 2 + 1);
             if (!this._dragging || this.uiOpen || this.paused) return;
+            const locked = document.pointerLockElement === this.renderer.domElement;
             // movementX hanya andal saat pointer terkunci; selain itu pakai delta clientX
             let mx, my;
-            if (document.pointerLockElement === this.renderer.domElement) {
+            if (locked) {
                 mx = e.movementX ?? 0; my = e.movementY ?? 0;
             } else {
                 mx = e.clientX - this._lastCX;
@@ -953,9 +1127,17 @@ export class Engine {
             }
             this._lastCX = e.clientX;
             this._lastCY = e.clientY;
+            // Saat lock baru didapat browser memusatkan kursor dan mengirim satu
+            // delta raksasa; buang agar pandangan tak melompat di tengah drag.
+            if (locked && !this._wasLocked) { this._wasLocked = true; return; }
+            this._wasLocked = locked;
+            // Lonjakan dari driver/kompositor (mis. jeda frame) dibatasi supaya satu
+            // event tak pernah memutar lebih dari yang bisa diikuti smoothing.
+            mx = Math.max(-MAX_LOOK_DELTA, Math.min(MAX_LOOK_DELTA, mx));
+            my = Math.max(-MAX_LOOK_DELTA, Math.min(MAX_LOOK_DELTA, my));
             this._dragMoved += Math.abs(mx) + Math.abs(my);
             // kunci pointer hanya SELAMA drag agar gerakan tak terbatas tepi layar
-            if (this._dragMoved > 5 && document.pointerLockElement !== this.renderer.domElement) {
+            if (this._dragMoved > 5 && !locked) {
                 try { this.renderer.domElement.requestPointerLock(); } catch { }
             }
             if (this._camTargetYaw === undefined) {
@@ -965,13 +1147,14 @@ export class Engine {
                 this._camCurrentYaw = initEul.y;
                 this._camCurrentPitch = initEul.x;
             }
-            this._camTargetYaw -= mx * 0.0028;
-            this._camTargetPitch = Math.max(-1.45, Math.min(1.45, this._camTargetPitch - my * 0.0028));
+            this._camTargetYaw -= mx * LOOK_SENS;
+            this._camTargetPitch = Math.max(-1.45, Math.min(1.45, this._camTargetPitch - my * LOOK_SENS));
         };
         this._onMouseUp = e => {
             if (e.button !== 0 || !this._dragging) return;
             const wasDrag = this._dragMoved > 6;
             this._dragging = false;
+            this._wasLocked = false;
             if (document.pointerLockElement) {
                 try { document.exitPointerLock(); } catch { }
             }
@@ -993,10 +1176,10 @@ export class Engine {
     /** preset waktu: 'day' | 'goldenHour' | 'night' | 'dawn' */
     setEnvironment(preset, { fog = true } = {}) {
         const cfg = {
-            day: { elev: 55, azim: 140, turb: 6, rayl: 1.2, expo: 0.35, sun: 0.9, sunColor: 0xfff3df, hemi: 0.18, fogC: 0xcfd9e4, envI: 0.18, bloom: 0.05 },
-            goldenHour: { elev: 8, azim: 250, turb: 7, rayl: 2.6, expo: 0.35, sun: 0.8, sunColor: 0xffc37a, hemi: 0.15, fogC: 0xe8c9a0, envI: 0.18, bloom: 0.1 },
-            dawn: { elev: 3, azim: 95, turb: 8, rayl: 3.2, expo: 0.4, sun: 0.6, sunColor: 0xa8bfe8, hemi: 0.12, fogC: 0x9fb2cd, envI: 0.15, bloom: 0.15 },
-            night: { elev: -12, azim: 0, turb: 4, rayl: 1, expo: 0.55, sun: 0.15, sunColor: 0xa9c3ff, hemi: 0.05, fogC: 0x0a1120, envI: 0.1, bloom: 0.25 }
+            day: { elev: 55, azim: 140, turb: 6, rayl: 1.2, expo: 0.35, sun: 0.9, sunColor: 0xfff3df, hemi: 0.18, fogC: 0xcfd9e4, envI: 0.18, bloom: 0.03 },
+            goldenHour: { elev: 8, azim: 250, turb: 7, rayl: 2.6, expo: 0.35, sun: 0.8, sunColor: 0xffc37a, hemi: 0.15, fogC: 0xe8c9a0, envI: 0.18, bloom: 0.06 },
+            dawn: { elev: 3, azim: 95, turb: 8, rayl: 3.2, expo: 0.4, sun: 0.6, sunColor: 0xa8bfe8, hemi: 0.12, fogC: 0x9fb2cd, envI: 0.15, bloom: 0.09 },
+            night: { elev: -12, azim: 0, turb: 4, rayl: 1, expo: 0.55, sun: 0.15, sunColor: 0xa9c3ff, hemi: 0.05, fogC: 0x0a1120, envI: 0.1, bloom: 0.15 }
         }[preset] || {};
         this.envPreset = preset;
         this.renderer.toneMappingExposure = cfg.expo;
@@ -1097,6 +1280,7 @@ export class Engine {
         this.camera.position.set(x, y, z);
         this.camera.rotation.set(0, THREE.MathUtils.degToRad(yawDeg), 0, 'YXZ');
         this._camTargetYaw = undefined;
+        this._velF = 0; this._velS = 0; // jangan bawa momentum melewati teleport
     }
 
     addWalkRect(x1, z1, x2, z2) {
@@ -1173,13 +1357,22 @@ export class Engine {
         if (this.keys['KeyS'] || this.keys['ArrowDown']) f -= 1;
         if (this.keys['KeyD'] || this.keys['ArrowRight']) s += 1;
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) s -= 1;
-        if (!f && !s) return;
         const len = Math.hypot(f, s);
-        f /= len; s /= len;
-        const prev = this.camera.position.clone();
+        if (len) { f /= len; s /= len; }
+        // Tombol berpindah dari 0 ke 1 seketika; luruhkan ke arah masukan agar
+        // langkah punya awalan dan hentian, bukan hidup-mati mendadak.
+        const k = 1 - Math.exp(-MOVE_DAMP * dt);
+        this._velF = (this._velF ?? 0) + (f - (this._velF ?? 0)) * k;
+        this._velS = (this._velS ?? 0) + (s - (this._velS ?? 0)) * k;
+        if (Math.abs(this._velF) < 1e-3 && Math.abs(this._velS) < 1e-3) {
+            this._velF = 0; this._velS = 0;
+            return;
+        }
+        f = this._velF; s = this._velS;
+        const prev = _prevPos.copy(this.camera.position);
         // maju/samping relatif arah pandang (yaw): yaw 0 menghadap -Z
-        const eul = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
-        const sinY = Math.sin(eul.y), cosY = Math.cos(eul.y);
+        _eulB.setFromQuaternion(this.camera.quaternion, 'YXZ');
+        const sinY = Math.sin(_eulB.y), cosY = Math.cos(_eulB.y);
         const p = this.camera.position;
         p.x += (f * -sinY + s * cosY) * speed * dt;
         p.z += (f * -cosY + s * -sinY) * speed * dt;
@@ -1354,8 +1547,7 @@ export class Engine {
         for (const h of hits) {
             const root = h.object.userData.interactRoot;
             if (!root || !root.userData.interact?.enabled) continue;
-            const d = this.camera.position.distanceTo(
-                root.getWorldPosition(new THREE.Vector3()));
+            const d = this.camera.position.distanceTo(root.getWorldPosition(_vec));
             if (d <= root.userData.interact.radius) return root;
         }
         return null;
@@ -1522,21 +1714,15 @@ export class Engine {
         this.dotnet?.invokeMethodAsync('OnNotify', msg, type);
     }
 
-    configureMinimap(cfg) { this.minimapCfg = cfg; }
+    configureMinimap(cfg) { this.minimapCfg = cfg; this._minimapBase = null; }
 
-    _drawMinimap() {
-        const c = this.hud.minimap;
-        if (!c || !this.minimapCfg) return;
-        const g = c.getContext('2d');
-        const { scale = 1.2, center = { x: 0, z: 0 } } = this.minimapCfg;
-        const W = c.width, H = c.height;
-        g.clearRect(0, 0, W, H);
+    /** Latar minimap (area jalan + fitur) tak pernah berubah — gambar sekali, lalu blit. */
+    _buildMinimapBase(W, H, px, scale) {
+        const base = document.createElement('canvas');
+        base.width = W; base.height = H;
+        const g = base.getContext('2d');
         g.fillStyle = 'rgba(8,12,20,0.85)';
         g.fillRect(0, 0, W, H);
-        const px = (x, z) => [
-            W / 2 + (x - center.x) * scale,
-            H / 2 + (z - center.z) * scale
-        ];
         // area jalan
         g.strokeStyle = 'rgba(201,162,39,0.5)'; g.lineWidth = 1;
         g.fillStyle = 'rgba(60,80,110,0.35)';
@@ -1561,6 +1747,27 @@ export class Engine {
             if (f.type === 'square') g.fillRect(fx - 4, fz - 4, 8, 8);
             else { g.beginPath(); g.arc(fx, fz, 3.5, 0, 7); g.fill(); }
         }
+        return base;
+    }
+
+    _drawMinimap() {
+        const c = this.hud.minimap;
+        if (!c || !this.minimapCfg) return;
+        const g = c.getContext('2d');
+        const { scale = 1.2, center = { x: 0, z: 0 } } = this.minimapCfg;
+        const W = c.width, H = c.height;
+        const px = (x, z) => [
+            W / 2 + (x - center.x) * scale,
+            H / 2 + (z - center.z) * scale
+        ];
+        // adegan boleh menambah area jalan setelah configureMinimap; bangun ulang bila berubah
+        const shape = `${W}x${H}:${this.walkRects.length}:${this.walkCircles.length}`;
+        if (!this._minimapBase || this._minimapShape !== shape) {
+            this._minimapBase = this._buildMinimapBase(W, H, px, scale);
+            this._minimapShape = shape;
+        }
+        g.clearRect(0, 0, W, H);
+        g.drawImage(this._minimapBase, 0, 0);
         // waypoint
         if (this.waypoint) {
             const [wx, wz] = px(this.waypoint.position.x, this.waypoint.position.z);
@@ -1570,10 +1777,10 @@ export class Engine {
         // player
         const p = this.camera.position;
         const [pxx, pzz] = px(p.x, p.z);
-        const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+        _eulB.setFromQuaternion(this.camera.quaternion, 'YXZ');
         g.save();
         g.translate(pxx, pzz);
-        g.rotate(-e.y);
+        g.rotate(-_eulB.y);
         g.fillStyle = '#ffffff';
         g.beginPath();
         g.moveTo(0, -7); g.lineTo(5, 6); g.lineTo(-5, 6);
@@ -1611,10 +1818,13 @@ export class Engine {
         const inVR = this.renderer.xr.isPresenting;
         if (!this.paused) {
             if (!inVR && this._camTargetYaw !== undefined) {
-                this._camCurrentYaw += (this._camTargetYaw - this._camCurrentYaw) * Math.min(1, dt * 15);
-                this._camCurrentPitch += (this._camTargetPitch - this._camCurrentPitch) * Math.min(1, dt * 15);
-                const eul = new THREE.Euler(this._camCurrentPitch, this._camCurrentYaw, 0, 'YXZ');
-                this.camera.quaternion.setFromEuler(eul);
+                // Peluruhan eksponensial: laju menyusul target sama di 30fps maupun 144fps,
+                // tak seperti lerp dt*k yang mengeras saat frame rate turun.
+                const k = 1 - Math.exp(-LOOK_DAMP * dt);
+                this._camCurrentYaw += (this._camTargetYaw - this._camCurrentYaw) * k;
+                this._camCurrentPitch += (this._camTargetPitch - this._camCurrentPitch) * k;
+                _eul.set(this._camCurrentPitch, this._camCurrentYaw, 0, 'YXZ');
+                this.camera.quaternion.setFromEuler(_eul);
             }
             if (inVR) this._moveVR(dt); else this._movePlayer(dt);
             for (const c of ACTIVE_CROWDS) c.update(dt, t);
@@ -1629,18 +1839,43 @@ export class Engine {
                 this.waypoint.rotation.y = t * 0.8;
                 this._updateGuide(t);
             }
-            if (!this.uiOpen) this._setHover(this._raycastInteract());
-            // kompas
-            if (this.hud.compass) {
-                const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
-                this.hud.compass.style.transform = `rotate(${e.y}rad)`;
+            // Raycast & gambar-ulang HUD tak perlu tiap frame: keduanya tak terlihat
+            // lebih halus di 60fps, tapi ongkosnya memakan anggaran frame.
+            if (!this.uiOpen && t >= this._nextHover) {
+                this._nextHover = t + 1 / HOVER_HZ;
+                this._setHover(this._raycastInteract());
             }
-            this._drawMinimap();
+            if (t >= this._nextMinimap) {
+                this._nextMinimap = t + 1 / MINIMAP_HZ;
+                if (this.hud.compass) {
+                    _eul.setFromQuaternion(this.camera.quaternion, 'YXZ');
+                    this.hud.compass.style.transform = `rotate(${_eul.y}rad)`;
+                }
+                this._drawMinimap();
+            }
         }
         // EffectComposer tidak kompatibel dengan framebuffer WebXR (merusak stereo),
         // maka saat sesi VR aktif kita render langsung (tanpa bloom/postprocessing).
         if (inVR) this.renderer.render(this.scene, this.camera);
-        else this.composer.render();
+        else { this.composer.render(); this._adaptResolution(dt); }
+    }
+
+    /** Jaga 60fps: turunkan resolusi render saat frame melar, naikkan lagi saat lega. */
+    _adaptResolution(dt) {
+        // rata-rata bergerak; satu frame tersendat tak boleh memicu perubahan
+        this._frameAvg += (dt * 1000 - this._frameAvg) * 0.05;
+        if (this._prCooldown > 0) { this._prCooldown -= dt; return; }
+        let pr = this._pr;
+        if (this._frameAvg > FRAME_BUDGET_MS) pr = Math.max(PR_MIN, this._pr - 0.25);
+        else if (this._frameAvg < FRAME_GOOD_MS) pr = Math.min(this._prMax, this._pr + 0.25);
+        if (pr === this._pr) return;
+        this._pr = pr;
+        this.renderer.setPixelRatio(pr);
+        this.composer.setPixelRatio(pr);
+        this.resize();
+        // beri waktu rata-rata menyesuaikan resolusi baru sebelum menilai ulang
+        this._prCooldown = 1.5;
+        this._frameAvg = (FRAME_BUDGET_MS + FRAME_GOOD_MS) / 2;
     }
 
     resize() {
@@ -1655,6 +1890,8 @@ export class Engine {
         this.uiOpen = open;
         if (open) {
             this._dragging = false;
+            this._wasLocked = false;
+            this._velF = 0; this._velS = 0; // berhenti, bukan melanjut saat UI ditutup
             if (document.pointerLockElement) {
                 try { document.exitPointerLock(); } catch { }
             }

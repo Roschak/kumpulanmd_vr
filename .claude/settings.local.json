@@ -23,7 +23,9 @@
       "Bash(npm init *)",
       "Bash(npm install *)",
       "Bash(node -e \"console.log\\('playwright-core', require\\('playwright-core/package.json'\\).version\\)\")",
-      "Bash(taskkill //F //IM dotnet.exe)"
+      "Bash(taskkill //F //IM dotnet.exe)",
+      "Bash(ipconfig)",
+      "Bash(grep -iEA1 \"wireless|wi-fi|ethernet|adapter\")"
     ]
   }
 }
