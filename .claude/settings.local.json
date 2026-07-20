@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "PowerShell(dotnet new blazor -n VRHaji.Web -o C:\\\\VRProjectNew\\\\src\\\\VRHaji.Web --interactivity Server --empty --no-https; dotnet new sln -n VRHaji -o C:\\\\VRProjectNew; dotnet sln C:\\\\VRProjectNew\\\\VRHaji.sln add C:\\\\VRProjectNew\\\\src\\\\VRHaji.Web\\\\VRHaji.Web.csproj)",
+      "PowerShell(New-Item *)",
+      "PowerShell(Get-ChildItem C:\\\\VRProjectNew\\\\src\\\\VRHaji.Web\\\\wwwroot\\\\js\\\\vr | Select-Object Name, Length, LastWriteTime; \\(Get-Content C:\\\\VRProjectNew\\\\src\\\\VRHaji.Web\\\\wwwroot\\\\js\\\\vr\\\\scenes.js | Measure-Object -Line\\).Lines)",
+      "PowerShell(dotnet build *)",
+      "PowerShell(dotnet run *)",
+      "PowerShell($deadline=\\(Get-Date\\).AddSeconds\\(40\\); do { try { $r=Invoke-WebRequest http://localhost:5210 -UseBasicParsing -TimeoutSec 3; break } catch { Start-Sleep -Milliseconds 800 } } while \\(\\(Get-Date\\) -lt $deadline\\); if \\($r\\) { \"HOME: $\\($r.StatusCode\\), length $\\($r.RawContentLength\\)\" } else { \"no response\" })",
+      "PowerShell(foreach \\($u in @\\('/scene/1','/scene/7','/scene/11','/js/vr/main.js','/js/vr/engine.js','/js/vr/scenes.js','/js/vr/builders.js','/js/user.js','/css/vr.css','/libs/three/three.module.js'\\)\\) { try { $r=Invoke-WebRequest \"http://localhost:5210$u\" -UseBasicParsing -TimeoutSec 10; \"$u -> $\\($r.StatusCode\\) \\($\\($r.RawContentLength\\) bytes\\)\" } catch { \"$u -> ERROR $\\($_.Exception.Message\\)\" } })",
+      "PowerShell(foreach \\($f in @\\('controls\\\\PointerLockControls.js','objects\\\\Sky.js','environments\\\\RoomEnvironment.js','postprocessing\\\\EffectComposer.js','postprocessing\\\\RenderPass.js','postprocessing\\\\UnrealBloomPass.js','postprocessing\\\\OutputPass.js'\\)\\) { $p=\"C:\\\\VRProjectNew\\\\src\\\\VRHaji.Web\\\\wwwroot\\\\libs\\\\three\\\\addons\\\\$f\"; \"$f -> $\\(Test-Path $p\\)\" })",
+      "PowerShell(node --version 2>$null; npx --no-install playwright --version 2>$null; if \\(Test-Path \"$env:ProgramFiles\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\"\\) {\"chrome: yes\"}; if \\(Test-Path \"${env:ProgramFiles\\(x86\\)}\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"\\) {\"edge x86: yes\"}; if \\(Test-Path \"$env:ProgramFiles\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"\\) {\"edge: yes\"})",
+      "PowerShell(Get-CimInstance *)",
+      "Bash(node shot.js)",
+      "Bash(grep -oE \"REVISION[^;]{0,40}\" /c/VRProjectNew/src/VRHaji.Web/wwwroot/libs/three/three.module.js)",
+      "Bash(grep -oE \"const REVISION[^;,]{0,30}\" /c/VRProjectNew/src/VRHaji.Web/wwwroot/libs/three/three.module.js)",
+      "Bash(grep -oE \"REVISION ?=[^;]{0,20}\" /c/VRProjectNew/src/VRHaji.Web/wwwroot/libs/three/three.module.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5230/)",
+      "Bash(node shot-run.js)",
+      "Bash(node smoke-all.js)",
+      "Bash(dotnet build *)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node -e \"console.log\\('playwright-core', require\\('playwright-core/package.json'\\).version\\)\")",
+      "Bash(taskkill //F //IM dotnet.exe)",
+      "Bash(ipconfig)",
+      "Bash(grep -iEA1 \"wireless|wi-fi|ethernet|adapter\")"
+    ]
+  }
+}

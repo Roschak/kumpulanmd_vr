@@ -1,0 +1,25 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# .NET
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+artifacts/
+
+# SQLite databases (seeded at runtime by DbSeeder)
+*.db
+*.db-shm
+*.db-wal
+
+# Node
+node_modules/
+
+# OS / editor
+.vs/
+*.swp
+Thumbs.db
+.DS_Store

@@ -1,0 +1,257 @@
+@page "/scene/{Urutan:int}"
+@using System.Text.Json
+@inject ISceneService SceneService
+@inject IProgressService ProgressService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@implements IAsyncDisposable
+
+<PageTitle>@(_scene?.Nama ?? "Scene") — VR Haji &amp; Umrah</PageTitle>
+
+<div class="vr-root" id="vr-root">
+    <div id="vr-container"></div>
+
+    @* HUD statis yang dikendalikan langsung oleh engine JS (60 fps, tanpa interop) *@
+    <div class="hud">
+        <div class="hud__top">
+            <div class="hud__scene-title">
+                <span class="hud__scene-no">SCENE @Urutan.ToString("00")</span>
+                <span>@_scene?.Nama</span>
+            </div>
+            <div class="hud__progress"><div id="vr-progressbar"></div></div>
+            <div class="hud__top-right">
+                <div id="vr-compass" class="hud__compass"><div id="vr-compass-dial">U</div></div>
+                <button class="btn btn--ghost btn--small" @onclick="ToggleEdukasi">📖 Materi</button>
+                <a class="btn btn--ghost btn--small" href="/">✕ Menu</a>
+            </div>
+        </div>
+        <div id="vr-objective" class="hud__objective"></div>
+        <div id="vr-crosshair" class="hud__crosshair">+</div>
+        <div id="vr-interact-label" class="hud__interact-label"></div>
+        <div id="vr-subtitle" class="hud__subtitle"></div>
+        <div id="vr-hint" class="hud__hint"></div>
+        <canvas id="vr-minimap" class="hud__minimap" width="200" height="200"></canvas>
+        <div id="vr-counter" class="hud__counter"></div>
+    </div>
+
+    @if (_showIntro)
+    {
+        <div class="overlay overlay--intro">
+            <div class="intro-card">
+                <div class="intro-card__no">SCENE @Urutan.ToString("00")</div>
+                <h1 class="intro-card__title">@_scene?.Nama</h1>
+                <p class="intro-card__desc">@_scene?.Deskripsi</p>
+                <div class="intro-card__meta">
+                    <span>📍 @_scene?.Lokasi</span><span>🕐 @_scene?.Waktu</span>
+                </div>
+                <div class="intro-card__controls">
+                    <div class="intro-card__controls-title">Kontrol</div>
+                    <div class="intro-card__controls-grid">
+                        <span class="controls-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+                        <span class="controls-action">Berjalan</span>
+                        <span class="controls-keys"><kbd>Shift</kbd></span>
+                        <span class="controls-action">Lari</span>
+                        <span class="controls-keys"><kbd>Tahan Klik</kbd> + geser</span>
+                        <span class="controls-action">Lihat sekeliling</span>
+                        <span class="controls-keys"><kbd>Klik</kbd> objek</span>
+                        <span class="controls-action">Interaksi</span>
+                        <span class="controls-keys"><kbd>Enter VR</kbd></span>
+                        <span class="controls-action">Masuk mode VR (headset)</span>
+                    </div>
+                </div>
+                @if (_loading)
+                {
+                    <div class="intro-card__loading">Memuat lingkungan 3D…</div>
+                }
+                else
+                {
+                    <button class="btn btn--gold btn--big" @onclick="StartScene">▶ Mulai Simulasi</button>
+                }
+            </div>
+        </div>
+    }
+
+    @if (_showEdukasi && _edukasi is not null)
+    {
+        <div class="overlay overlay--panel">
+            <div class="edu-panel">
+                <div class="edu-panel__header">
+                    <h2>📖 @_edukasi.Judul</h2>
+                    <button class="edu-panel__close" @onclick="CloseEdukasi">✕</button>
+                </div>
+                <div class="edu-panel__tabs">
+                    @foreach (var tab in _eduTabs)
+                    {
+                        <button class="edu-panel__tab @(tab == _activeTab ? "edu-panel__tab--active" : "")"
+                                @onclick="() => _activeTab = tab">@tab</button>
+                    }
+                </div>
+                <div class="edu-panel__body">
+                    @foreach (var line in TabContent(_activeTab))
+                    {
+                        <div class="edu-panel__item @(_activeTab == "Dalil" ? "edu-panel__item--dalil" : "")">@line</div>
+                    }
+                </div>
+                <div class="edu-panel__footer">
+                    <button class="btn btn--gold" @onclick="CloseEdukasi">Saya Mengerti ✔</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_showComplete)
+    {
+        <div class="overlay overlay--intro">
+            <div class="intro-card intro-card--complete">
+                <div class="intro-card__no">@(_isLast ? "SIMULASI SELESAI" : $"SCENE {Urutan:00} SELESAI")</div>
+                <div class="complete-icon">@(_isLast ? "🕋" : "✅")</div>
+                <h1 class="intro-card__title">
+                    @(_isLast ? "Selamat, Anda telah menyelesaikan simulasi ibadah haji." : $"{_scene?.Nama} — Selesai!")
+                </h1>
+                <p class="intro-card__desc">
+                    @(_isLast
+                        ? "Semoga Allah memudahkan langkah Anda menuju Baitullah dan menjadikan haji Anda haji yang mabrur. Labbaik Allahumma labbaik."
+                        : "Progress tersimpan. Lanjutkan ke tahap ibadah berikutnya.")
+                </p>
+                <div class="intro-card__score">Skor scene: <strong>@_sceneScore</strong></div>
+                <div class="intro-card__actions">
+                    @if (!_isLast)
+                    {
+                        <button class="btn btn--gold btn--big" @onclick="GoNext">Scene @((Urutan + 1).ToString("00")) ➜</button>
+                    }
+                    <a class="btn btn--ghost" href="/">Kembali ke Menu</a>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_notification is not null)
+    {
+        <div class="toast toast--@_notificationType">@_notification</div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Urutan { get; set; }
+
+    private SceneData? _scene;
+    private EdukasiContent? _edukasi;
+    private int _sceneScore;
+    private int _totalScenes = 12;
+
+    private bool _showIntro = true;
+    private bool _loading = true;
+    private bool _showEdukasi;
+    private bool _showComplete;
+    private string? _notification;
+    private string _notificationType = "info";
+    private string _activeTab = "Penjelasan";
+    private readonly string[] _eduTabs = ["Penjelasan", "Dalil", "Hikmah", "Larangan", "Tips"];
+
+    private string _userId = string.Empty;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<SceneView>? _selfRef;
+
+    private bool _isLast => Urutan >= _totalScenes;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _scene = await SceneService.GetSceneByUrutanAsync(Urutan);
+        if (_scene is null) { Nav.NavigateTo("/"); return; }
+        _edukasi = SceneService.ParseEdukasi(_scene);
+        _totalScenes = (await SceneService.GetAllScenesAsync()).Count;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await using (var userModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/user.js"))
+        {
+            _userId = await userModule.InvokeAsync<string>("getUserId");
+        }
+        _selfRef = DotNetObjectReference.Create(this);
+        _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/vr/main.js");
+        await _module.InvokeVoidAsync("preload", "vr-container", Urutan, _selfRef);
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task StartScene()
+    {
+        _showIntro = false;
+        if (_module is not null) await _module.InvokeVoidAsync("start");
+    }
+
+    private IEnumerable<string> TabContent(string tab) => _edukasi is null ? [] : tab switch
+    {
+        "Penjelasan" => _edukasi.Penjelasan,
+        "Dalil" => _edukasi.Dalil,
+        "Hikmah" => _edukasi.Hikmah,
+        "Larangan" => _edukasi.Larangan,
+        "Tips" => _edukasi.Tips,
+        _ => []
+    };
+
+    private async Task ToggleEdukasi()
+    {
+        _showEdukasi = !_showEdukasi;
+        await SetUiOpen(_showEdukasi);
+    }
+
+    private async Task CloseEdukasi()
+    {
+        _showEdukasi = false;
+        await SetUiOpen(false);
+    }
+
+    /// <summary>Dipanggil engine JS saat seluruh alur scene selesai.</summary>
+    [JSInvokable]
+    public async Task OnSceneCompleted()
+    {
+        await ProgressService.SaveCheckpointAsync(_userId, _scene!.Id, 0, 100);
+        _sceneScore += 100;
+        _showComplete = true;
+        await SetUiOpen(true);
+        StateHasChanged();
+    }
+
+    /// <summary>Notifikasi singkat dari engine JS.</summary>
+    [JSInvokable]
+    public void OnNotify(string message, string type)
+    {
+        Notify(message, type);
+    }
+
+    private void Notify(string message, string type)
+    {
+        _notification = message;
+        _notificationType = type;
+        StateHasChanged();
+        _ = Task.Delay(3500).ContinueWith(_ =>
+        {
+            _notification = null;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async Task SetUiOpen(bool open)
+    {
+        if (_module is not null) await _module.InvokeVoidAsync("setUiOpen", open);
+    }
+
+    private void GoNext() => Nav.NavigateTo($"/scene/{Urutan + 1}", forceLoad: true);
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("dispose");
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException) { }
+        _selfRef?.Dispose();
+    }
+}
